@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشاهدة الفيلم</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>🎬 أكوام برو</h1>
+        <a href="/" class="back">← العودة</a>
+    </header>
+
+    <main>
+        <div id="player-container">
+            <video id="player" controls autoplay></video>
+            <div id="links-container">
+                <h3>جودة المشاهدة</h3>
+                <div id="quality-links"></div>
+                <h3>روابط التحميل</h3>
+                <div id="download-links"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // استخراج رابط الفيلم من URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const movieUrl = urlParams.get('url');
+        if (!movieUrl) {
+            document.getElementById('player-container').innerHTML = '<p class="error">لم يتم توفير رابط الفيلم</p>';
+        } else {
+            loadMovie(movieUrl);
+        }
+
+        async function loadMovie(url) {
+            try {
+                // جلب روابط الفيديو
+                const res = await fetch(`/api/movie-links?url=${encodeURIComponent(url)}`);
+                const data = await res.json();
+                if (!data.success || !data.links || data.links.length === 0) {
+                    document.getElementById('quality-links').innerHTML = '<p class="error">لا توجد روابط لهذا الفيلم</p>';
+                    return;
+                }
+
+                // عرض الروابط في واجهة
+                const qualityDiv = document.getElementById('quality-links');
+                const downloadDiv = document.getElementById('download-links');
+                let firstLink = null;
+
+                data.links.forEach(link => {
+                    const quality = link.quality || 'جودة عالية';
+                    const watch = link.watch;
+                    const download = link.download;
+
+                    // زر المشاهدة
+                    const watchBtn = document.createElement('button');
+                    watchBtn.textContent = `▶ مشاهدة (${quality})`;
+                    watchBtn.onclick = () => playVideo(watch);
+                    qualityDiv.appendChild(watchBtn);
+
+                    // زر التحميل
+                    if (download) {
+                        const downloadBtn = document.createElement('a');
+                        downloadBtn.href = `/api/stream?url=${encodeURIComponent(download)}`;
+                        downloadBtn.textContent = `⬇ تحميل (${quality})`;
+                        downloadBtn.target = '_blank';
+                        downloadBtn.className = 'download-link';
+                        downloadDiv.appendChild(downloadBtn);
+                    }
+
+                    if (!firstLink) firstLink = watch;
+                });
+
+                // تشغيل أول رابط تلقائياً
+                if (firstLink) playVideo(firstLink);
+
+            } catch (e) {
+                document.getElementById('quality-links').innerHTML = `<p class="error">حدث خطأ: ${e.message}</p>`;
+            }
+        }
+
+        function playVideo(url) {
+            const player = document.getElementById('player');
+            player.src = `/api/stream?url=${encodeURIComponent(url)}`;
+            player.load();
+            player.play();
+        }
+    </script>
+</body>
+</html>

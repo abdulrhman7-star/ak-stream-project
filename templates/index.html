@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكوام – مشاهدة أفلام ومسلسلات</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>🎬 أكوام برو</h1>
+        <div class="tabs">
+            <button class="tab active" data-tab="movies">أفلام</button>
+            <button class="tab" data-tab="series">مسلسلات</button>
+        </div>
+        <input type="text" id="search" placeholder="ابحث عن فيلم أو مسلسل...">
+    </header>
+
+    <main>
+        <div id="movies-container" class="grid"></div>
+        <div id="series-container" class="grid" style="display:none;"></div>
+        <div id="loading">⏳ جاري التحميل...</div>
+    </main>
+
+    <script>
+        // جلب وعرض البيانات
+        async function fetchData(endpoint, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '<div class="loading">⏳ جاري التحميل...</div>';
+            try {
+                const res = await fetch(`/api/${endpoint}`);
+                const data = await res.json();
+                if (data.success && data.data.length) {
+                    container.innerHTML = data.data.map(item => `
+                        <div class="card" onclick="location.href='/watch?url=${encodeURIComponent(item.link)}'">
+                            <img src="${item.image || 'https://via.placeholder.com/200x300'}" alt="${item.title}">
+                            <h3>${item.title}</h3>
+                            <div class="meta">
+                                <span>⭐ ${item.rating}</span>
+                                <span>${item.year}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="error">لا توجد بيانات</p>';
+                }
+            } catch (e) {
+                container.innerHTML = '<p class="error">حدث خطأ في التحميل</p>';
+            }
+        }
+
+        // تحميل البيانات عند بدء التشغيل
+        fetchData('movies', 'movies-container');
+        fetchData('series', 'series-container');
+
+        // التبديل بين التبويبات
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                const target = this.dataset.tab;
+                document.getElementById('movies-container').style.display = target === 'movies' ? 'grid' : 'none';
+                document.getElementById('series-container').style.display = target === 'series' ? 'grid' : 'none';
+            });
+        });
+
+        // البحث
+        document.getElementById('search').addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.card').forEach(card => {
+                const title = card.querySelector('h3').textContent.toLowerCase();
+                card.style.display = title.includes(query) ? 'block' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>
