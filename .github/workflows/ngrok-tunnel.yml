@@ -1,0 +1,66 @@
+on_http_request:
+  - name: ForwardToFlask
+    actions:
+      - type: forward-internal
+        config:
+          url: http://localhost:5001
+          on_error: continue
+      - type: custom-response
+        config:
+          status_code: 200
+          headers:
+            content-type: text/html; charset=utf-8
+            strict-transport-security: max-age=31536000; includeSubDomains
+            x-frame-options: DENY
+            x-content-type-options: nosniff
+            referrer-policy: strict-origin-when-cross-origin
+          body: |
+            <!doctype html>
+            <html lang="ar" dir="rtl">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>الخادم غير متاح مؤقتاً</title>
+              <style>
+                body {
+                  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                  background: #08090b;
+                  color: #fff;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  height: 100vh;
+                  margin: 0;
+                  padding: 20px;
+                }
+                .card {
+                  max-width: 500px;
+                  background: #15171c;
+                  border: 1px solid #292d35;
+                  border-radius: 16px;
+                  padding: 30px;
+                  text-align: center;
+                }
+                h1 { color: #f5a623; }
+                p { color: #9297a1; margin: 15px 0; }
+                .retry-btn {
+                  background: #f5a623;
+                  color: #111;
+                  border: none;
+                  padding: 10px 24px;
+                  border-radius: 30px;
+                  font-weight: bold;
+                  cursor: pointer;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <h1>⏳ الخادم في وضع الاستعداد</h1>
+                <p>خادم Flask الخاص بك غير متصل حالياً أو لم يُشغّل بعد.</p>
+                <p>يرجى تشغيل الخادم على المنفذ <strong>5001</strong> ثم تحديث الصفحة.</p>
+                <button class="retry-btn" onclick="location.reload()">🔄 إعادة المحاولة</button>
+                <p style="margin-top:20px;font-size:12px;color:#555;">يعمل عبر ngrok Cloud Endpoint</p>
+              </div>
+            </body>
+            </html>
