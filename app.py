@@ -1,5 +1,5 @@
-# app.py – Full working proxy for ak.sv
-# No notebook magic, pure Flask.
+# app.py – خادم وسيط لأكوام برو (متوافق مع الواجهة الأمامية)
+# يعمل في Colab (مع pyngrok) وعلى Render (مع gunicorn)
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 app = Flask(__name__)
 CORS(app)
 
-# ------- CONFIG ----------
+# ========== الإعدادات ==========
 BASE_URL = "https://ak.sv"
 HEADERS = {
     "Referer": BASE_URL + "/",
@@ -31,7 +31,7 @@ catalog = {"movies": [], "series": [], "updated_at": None}
 _db_lock = threading.RLock()
 _is_loading = False
 
-# ------- HELPERS ----------
+# ========== دوال مساعدة ==========
 def utc_now():
     return datetime.now(timezone.utc).isoformat()
 
@@ -45,6 +45,7 @@ def load_json_file(path, default):
         return default
 
 def save_json(path, data):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -123,7 +124,7 @@ def load_database():
     catalog["movies"] = loaded.get("movies", [])
     catalog["series"] = loaded.get("series", [])
     catalog["updated_at"] = loaded.get("updated_at")
-    print(f"📦 Loaded: {len(pages_db)} pages, {len(catalog['movies'])} movies, {len(catalog['series'])} series")
+    print(f"📦 تم التحميل: {len(pages_db)} صفحة, {len(catalog['movies'])} فيلم, {len(catalog['series'])} مسلسل")
 
 def get_movies():
     with _db_lock:
@@ -155,10 +156,11 @@ def paginate(items, page=1, limit=24):
         "data": data
     }
 
-# ------- ROUTES ----------
+# ========== المسارات (Routes) ==========
+
 @app.route('/')
 def index():
-    return jsonify({"message": "🚀 API is running. Use /api/movies, /api/all-movies, /api/movie-links?url=..., /api/series-episodes?url=..."})
+    return jsonify({"message": "🚀 خادم أكوام برو يعمل. استخدم /api/movies, /api/all-movies, /api/movie-links?url=..., /api/series-episodes?url=..."})
 
 @app.route('/api/movies')
 def api_movies():
@@ -234,12 +236,13 @@ def api_status():
             "updated_at": catalog.get("updated_at")
         })
 
+# ---- مسار استخراج روابط الفيديو (يستخدمه المشغل) ----
 @app.route('/api/movie-links')
 def movie_links():
-    """Extract video sources from a movie/episode page."""
+    """استخراج روابط المشاهدة والتحميل من صفحة فيلم أو حلقة"""
     url = request.args.get("url")
     if not url:
-        return jsonify({"success": False, "error": "url parameter required"}), 400
+        return jsonify({"success": False, "error": "معامل url مطلوب"}), 400
     try:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
@@ -252,7 +255,7 @@ def movie_links():
             src = source.get("src")
             if not src:
                 continue
-            # Clean up bad prefixes
+            # تنظيف الرابط من البادئات الفاسدة
             clean = re.sub(r'^https://ak\.sv(vlc://|intent:)', '', src)
             clean = re.sub(r'^vlc://|^intent:', '', clean)
             clean = clean.split('#Intent;')[0] if '#Intent;' in clean else clean
@@ -261,24 +264,25 @@ def movie_links():
                 links.append({
                     "quality": quality or "SD",
                     "watch": clean,
-                    "download": clean  # same for download; can add different logic if needed
+                    "download": clean  # نستخدم نفس الرابط للتحميل (يمكن تعديله لاحقاً)
                 })
         return jsonify({"success": True, "links": links})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ---- مسار استخراج حلقات المسلسل ----
 @app.route('/api/series-episodes')
 def series_episodes():
-    """Extract episode list from a series page."""
+    """استخراج قائمة حلقات المسلسل من صفحة المسلسل"""
     url = request.args.get("url")
     if not url:
-        return jsonify({"success": False, "error": "url parameter required"}), 400
+        return jsonify({"success": False, "error": "معامل url مطلوب"}), 400
     try:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
         episodes = []
-        # Common container for episodes on ak.sv
+        # البحث عن حلقات في القسم المخصص
         for item in soup.select('#series-episodes .bg-primary2'):
             link_el = item.select_one('h2 a') or item.select_one('a')
             if not link_el:
@@ -288,7 +292,7 @@ def series_episodes():
                 continue
             full_url = absolute_url(href)
             title = clean_text(link_el.get_text(" ", strip=True))
-            # Try to extract episode number from title or URL
+            # استخراج رقم الحلقة
             num_match = re.search(r'\d+', title)
             if not num_match:
                 num_match = re.search(r'\d+', href)
@@ -302,17 +306,25 @@ def series_episodes():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# ------- BACKGROUND CRAWLER (simplified) ----------
-def fetch_all_pages():
+@app.route('/api/refresh', methods=['POST'])
+def api_refresh():
+    """بدء تحديث البيانات في الخلفية"""
     global _is_loading
     with _db_lock:
         if _is_loading:
-            return
+            return jsonify({"success": False, "message": "التحديث قيد التشغيل بالفعل"}), 409
         _is_loading = True
+    thread = threading.Thread(target=fetch_all_pages, daemon=True)
+    thread.start()
+    return jsonify({"success": True, "message": "بدأ تحديث البيانات في الخلفية"})
+
+# ========== جلب البيانات في الخلفية ==========
+def fetch_all_pages():
+    global _is_loading
     try:
-        print("🚀 Starting background fetch...")
-        # Only fetch first 3 pages for demo – you can increase
-        for page in range(3):
+        print("🚀 بدء جلب البيانات...")
+        # نأخذ فقط أول 5 صفحات للعرض السريع – يمكنك زيادة العدد
+        for page in range(5):
             for base in ["https://ak.sv/movies", "https://ak.sv/series"]:
                 url = f"{base}?page={page}"
                 try:
@@ -330,7 +342,7 @@ def fetch_all_pages():
                         movies = extract_movies_from_html(html)
                         with _db_lock:
                             catalog["movies"].extend(movies)
-                            # deduplicate
+                            # إزالة المكررات
                             seen = set()
                             deduped = []
                             for m in catalog["movies"]:
@@ -351,24 +363,27 @@ def fetch_all_pages():
                                     seen.add(key)
                                     deduped.append(s)
                             catalog["series"] = deduped
-                    print(f"✅ Fetched {url}")
+                    print(f"✅ تم جلب {url}")
                     time.sleep(1)
                 except Exception as e:
-                    print(f"❌ Error fetching {url}: {e}")
+                    print(f"❌ خطأ في {url}: {e}")
         save_json(CATALOG_FILE, catalog)
         save_json(PAGES_DB_FILE, pages_db)
-        print("✅ Background fetch complete.")
+        print("✅ انتهى جلب البيانات.")
+    except Exception as e:
+        print(f"❌ خطأ عام: {e}")
     finally:
         with _db_lock:
             _is_loading = False
 
-# Start background fetch if database is empty
+# ========== تشغيل عند البدء ==========
 load_database()
 if not catalog["movies"] and not catalog["series"]:
+    # نبدأ الجلب في الخلفية فوراً
     threading.Thread(target=fetch_all_pages, daemon=True).start()
-    print("🟢 Background crawler started.")
+    print("🟢 بدأ الجلب الخلفي.")
 
-# ------- RUN ----------
+# ========== تشغيل الخادم ==========
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5001))
     app.run(host="0.0.0.0", port=port, debug=False)
