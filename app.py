@@ -1,7 +1,8 @@
 # ============================================
-# app.py – خادم Flask متكامل مع واجهة أمامية
+# app.py – خادم Flask المحدث ليتوافق مع الواجهة الجديدة
 # ============================================
 from flask import Flask, render_template, request, jsonify, Response
+from flask_cors import CORS  # مهم جداً للاتصال عبر ngrok
 import requests
 import json
 import re
@@ -9,6 +10,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 app = Flask(__name__)
+CORS(app) # تفعيل CORS لجميع المسارات
 
 # ------------------- الإعدادات والترويسات -------------------
 HEADERS = {
@@ -16,10 +18,12 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
 
-# ------------------- قاعدة البيانات المؤقتة -------------------
-pages_db = {}  # ستُملأ بالبيانات (من ScraperAPI أو الجلب المباشر)
+# ------------------- قاعدة البيانات في الذاكرة -------------------
+# سنخزن البيانات هنا بعد جلبها لتسريع الاستجابة للواجهة
+all_movies_db = []
+all_series_db = []
 
-# دوال استخراج البيانات (مأخوذة من الكود السابق)
+# دوال استخراج البيانات
 def extract_movies_from_html(html, base_url='https://ak.sv'):
     soup = BeautifulSoup(html, 'html.parser')
     movies = []
@@ -39,48 +43,14 @@ def extract_movies_from_html(html, base_url='https://ak.sv'):
         rating = rating_el.get_text(strip=True).replace('⭐', '').strip() if rating_el else '0.0'
         year_el = item.select_one('.badge-secondary')
         year = year_el.get_text(strip=True) if year_el else '----'
-        genre_els = item.select('.badge-light')
-        genres = [g.get_text(strip=True) for g in genre_els]
-        quality_el = item.select_one('.label.quality')
-        quality = quality_el.get_text(strip=True) if quality_el else ''
         movies.append({
             'title': title,
             'link': link,
             'image': img_src,
             'rating': rating,
-            'year': year,
-            'genres': genres,
-            'quality': quality
+            'year': year
         })
     return movies
-
-def extract_series_from_html(html):
-    return extract_movies_from_html(html)
-
-def extract_episodes_from_html(html, base_url='https://ak.sv'):
-    soup = BeautifulSoup(html, 'html.parser')
-    episodes = []
-    for item in soup.select('#series-episodes .bg-primary2'):
-        link_el = item.select_one('h2 a')
-        if not link_el:
-            continue
-        title = link_el.get_text(strip=True)
-        href = link_el.get('href')
-        if href and not href.startswith('http'):
-            href = urljoin(base_url, href)
-        img_el = item.select_one('img')
-        img_src = img_el.get('data-src') or img_el.get('src') if img_el else ''
-        if img_src and not img_src.startswith('http'):
-            img_src = urljoin(base_url, img_src)
-        number_match = re.search(r'\d+', title) or re.search(r'\d+', href)
-        number = number_match.group(0) if number_match else '?'
-        episodes.append({
-            'number': number,
-            'title': title,
-            'url': href,
-            'image': img_src
-        })
-    return episodes
 
 def extract_video_sources(html):
     soup = BeautifulSoup(html, 'html.parser')
@@ -102,24 +72,17 @@ def extract_video_sources(html):
                 })
     return sources
 
-# ------------------- دوال جلب الروابط -------------------
 def get_movie_links(movie_url):
-    """جلب روابط المشاهدة والتحميل من صفحة الفيلم"""
-    if movie_url in pages_db:
-        html = pages_db[movie_url]['html']
-    else:
-        try:
-            r = requests.get(movie_url, headers=HEADERS, timeout=15)
-            if r.status_code != 200:
-                return []
-            html = r.text
-            pages_db[movie_url] = {'html': html, 'type': 'movie_detail'}
-        except:
+    try:
+        r = requests.get(movie_url, headers=HEADERS, timeout=15)
+        if r.status_code != 200:
             return []
+        html = r.text
+    except:
+        return []
     
     soup = BeautifulSoup(html, 'html.parser')
     links = []
-    # البحث في التبويبات
     tabs = soup.select('.tab-content.quality')
     for tab in tabs:
         quality_id = tab.get('id', '')
@@ -127,12 +90,13 @@ def get_movie_links(movie_url):
         quality = quality_map.get(quality_id, quality_id.replace('tab-', ''))
         watch_el = tab.select_one('a.link-show')
         download_el = tab.select_one('a.link-download')
-        watch = watch_el.get('href') if watch_el else None
-        download = download_el.get('href') if download_el else None
-        if watch:
-            links.append({'quality': quality, 'watch': watch, 'download': download})
+        if watch_el:
+            links.append({
+                'quality': quality, 
+                'watch': watch_el.get('href'), 
+                'download': download_el.get('href') if download_el else None
+            })
     
-    # إذا لم نجد التبويبات، نستخدم عنصر <video>
     if not links:
         sources = extract_video_sources(html)
         for src in sources:
@@ -143,58 +107,54 @@ def get_movie_links(movie_url):
             })
     return links
 
-def get_series_episodes(series_url):
-    """جلب قائمة حلقات المسلسل"""
-    if series_url in pages_db:
-        html = pages_db[series_url]['html']
-    else:
+# ------------------- جلب البيانات الأولية -------------------
+def scrape_pages(base_url, pages_count=3):
+    """جلب عدد معين من الصفحات ودمجها في قائمة واحدة"""
+    results = []
+    for i in range(1, pages_count + 1):
+        url = f"{base_url}/page/{i}" if i > 1 else base_url
         try:
-            r = requests.get(series_url, headers=HEADERS, timeout=15)
-            if r.status_code != 200:
-                return []
-            html = r.text
-            pages_db[series_url] = {'html': html, 'type': 'series_detail'}
-        except:
-            return []
-    return extract_episodes_from_html(html)
-
-# ------------------- تحميل البيانات الأولية (اختياري) -------------------
-# هنا يمكنك استدعاء دوال لجلب الصفحات إذا لم تكن موجودة.
-# مثلاً: جلب أول صفحة من الأفلام والمسلسلات.
+            r = requests.get(url, headers=HEADERS, timeout=10)
+            if r.status_code == 200:
+                items = extract_movies_from_html(r.text, base_url='https://ak.sv')
+                results.extend(items)
+                print(f"تم جلب {url}")
+        except Exception as e:
+            print(f"فشل جلب {url}: {e}")
+    return results
 
 def fetch_initial_data():
-    """جلب الصفحات الأساسية لتشغيل الموقع"""
-    print("جلب البيانات الأولية...")
-    for url in ['https://ak.sv/movies', 'https://ak.sv/series']:
-        if url not in pages_db:
-            try:
-                r = requests.get(url, headers=HEADERS, timeout=10)
-                if r.status_code == 200:
-                    pages_db[url] = {'html': r.text, 'type': 'movies' if 'movies' in url else 'series'}
-                    print(f"تم جلب {url}")
-            except Exception as e:
-                print(f"فشل جلب {url}: {e}")
-    print("تم الانتهاء من جلب البيانات الأولية.")
+    global all_movies_db, all_series_db
+    print("⏳ جاري جلب الأفلام (أول 5 صفحات)...")
+    all_movies_db = scrape_pages('https://ak.sv/movies', pages_count=5)
+    
+    print("⏳ جاري جلب المسلسلات (أول 5 صفحات)...")
+    all_series_db = scrape_pages('https://ak.sv/series', pages_count=5)
+    print(f"✅ تم الانتهاء! ({len(all_movies_db)} فيلم و {len(all_series_db)} مسلسل)")
 
-# ------------------- نقاط النهاية API -------------------
-@app.route('/api/movies')
-def api_movies():
-    """إرجاع قائمة الأفلام (من الصفحة الأولى)"""
-    if 'https://ak.sv/movies' in pages_db:
-        html = pages_db['https://ak.sv/movies']['html']
-        movies = extract_movies_from_html(html)
-        return jsonify({'success': True, 'data': movies})
-    else:
-        return jsonify({'error': 'لم يتم جلب البيانات بعد'}), 404
+# ------------------- نقاط النهاية (APIs) الجديدة -------------------
+@app.route('/api/all-movies')
+def api_all_movies():
+    """إرجاع جميع الأفلام المخزنة"""
+    return jsonify({'success': True, 'data': all_movies_db})
 
-@app.route('/api/series')
-def api_series():
-    if 'https://ak.sv/series' in pages_db:
-        html = pages_db['https://ak.sv/series']['html']
-        series = extract_series_from_html(html)
-        return jsonify({'success': True, 'data': series})
-    else:
-        return jsonify({'error': 'لم يتم جلب البيانات بعد'}), 404
+@app.route('/api/all-series')
+def api_all_series():
+    """إرجاع جميع المسلسلات المخزنة"""
+    return jsonify({'success': True, 'data': all_series_db})
+
+@app.route('/api/search')
+def api_search():
+    """البحث في الأفلام والمسلسلات"""
+    query = request.args.get('q', '').lower()
+    if not query:
+        return jsonify({'success': False, 'error': 'كلمة البحث فارغة'})
+    
+    # دمج القائمتين للبحث
+    combined = all_movies_db + all_series_db
+    results = [item for item in combined if query in item['title'].lower()]
+    
+    return jsonify({'success': True, 'data': results})
 
 @app.route('/api/movie-links')
 def movie_links():
@@ -202,19 +162,10 @@ def movie_links():
     if not url:
         return jsonify({'error': 'رابط مطلوب'}), 400
     links = get_movie_links(url)
-    return jsonify({'success': True, 'links': links})
-
-@app.route('/api/series-episodes')
-def series_episodes():
-    url = request.args.get('url')
-    if not url:
-        return jsonify({'error': 'رابط مطلوب'}), 400
-    episodes = get_series_episodes(url)
-    return jsonify({'success': True, 'episodes': episodes})
+    return jsonify({'success': True, 'data': links}) # تغيير من links إلى data لتطابق الواجهة
 
 @app.route('/api/stream')
 def stream_video():
-    """بث الفيديو عبر الوكيل مع ترويسة Referer"""
     video_url = request.args.get('url')
     if not video_url:
         return jsonify({'error': 'رابط الفيديو مطلوب'}), 400
@@ -227,19 +178,7 @@ def stream_video():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ------------------- صفحات الواجهة الأمامية -------------------
-@app.route('/')
-def index():
-    """الصفحة الرئيسية – تعرض قوائم الأفلام والمسلسلات"""
-    return render_template('index.html')
-
-@app.route('/watch')
-def watch():
-    """صفحة المشاهدة – تعرض تفاصيل الفيلم/الحلقة مع المشغل"""
-    return render_template('watch.html')
-
 # ------------------- تشغيل الخادم -------------------
 if __name__ == '__main__':
-    # جلب البيانات الأولية (يمكن تعطيلها إذا كانت لديك بيانات مسبقة)
-    fetch_initial_data()
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    fetch_initial_data() # جلب البيانات عند بدء التشغيل
+    app.run(host='0.0.0.0', port=5001, debug=False)
