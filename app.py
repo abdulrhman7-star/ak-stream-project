@@ -2,6 +2,7 @@
 # app.py – خادم Flask مع جلب تدريجي في الخلفية
 # ============================================
 from flask import Flask, render_template, request, jsonify, Response
+from flask_cors import CORS
 import requests
 import json
 import re
@@ -11,6 +12,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 app = Flask(__name__)
+CORS(app)  # لتسهيل الاختبار من متصفحات مختلفة
 
 # ------------------- الإعدادات -------------------
 HEADERS = {
@@ -18,10 +20,11 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
 
-pages_db = {}  # قاعدة البيانات المؤقتة
-is_loading = False  # علم لمنع تشغيل الجلب مرتين
+pages_db = {}
+_is_loading = False
+_background_started = False  # علم لمنع التشغيل المتكرر
 
-# ------------------- دوال الاستخراج -------------------
+# ------------------- دوال الاستخراج (نفسها سابقاً) -------------------
 def extract_movies_from_html(html, base_url='https://ak.sv'):
     soup = BeautifulSoup(html, 'html.parser')
     movies = []
@@ -132,11 +135,10 @@ def fetch_all_pages(base_url, max_pages=500, delay=0.5):
     return all_html
 
 def populate_pages_db_background():
-    """تُشغل في خيط منفصل حتى لا توقف تشغيل الخادم"""
-    global is_loading
-    if is_loading:
+    global _is_loading, pages_db
+    if _is_loading:
         return
-    is_loading = True
+    _is_loading = True
     print("🚀 بدء جلب جميع الصفحات في الخلفية...")
 
     try:
@@ -154,7 +156,17 @@ def populate_pages_db_background():
     except Exception as e:
         print(f"❌ فشل الجلب الخلفي: {e}")
     finally:
-        is_loading = False
+        _is_loading = False
+
+def start_background_fetch():
+    """تشغيل خيط الجلب إذا لم يكن قد بدأ من قبل"""
+    global _background_started
+    if not _background_started:
+        _background_started = True
+        thread = threading.Thread(target=populate_pages_db_background)
+        thread.daemon = True
+        thread.start()
+        print("✅ تم إطلاق خيط الجلب الخلفي.")
 
 # ------------------- دوال جلب الروابط التفصيلية -------------------
 def get_movie_links(movie_url):
@@ -211,12 +223,8 @@ def get_series_episodes(series_url):
 # ------------------- نقاط النهاية API -------------------
 @app.route('/api/movies')
 def api_movies():
-    # إذا كانت قاعدة البيانات فارغة، نعطي بيانات وهمية أو نطلب الانتظار
     if not pages_db:
         return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل، حاول مرة أخرى بعد دقيقة'}), 503
-    
-    first_page_url = 'https://ak.sv/movies'
-    # نبحث عن أول صفحة أفلام في القاعدة
     for url, data in pages_db.items():
         if data['type'] == 'movies':
             movies = extract_movies_from_html(data['html'])
@@ -227,7 +235,6 @@ def api_movies():
 def api_series():
     if not pages_db:
         return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل، حاول مرة أخرى بعد دقيقة'}), 503
-    
     for url, data in pages_db.items():
         if data['type'] == 'series':
             series = extract_series_from_html(data['html'])
@@ -292,12 +299,12 @@ def index():
 def watch():
     return render_template('watch.html')
 
-# ------------------- تشغيل الخادم -------------------
+# ------------------- بدء الجلب الخلفي فوراً (حتى مع Gunicorn) -------------------
+# يتم استدعاؤها بمجرد استيراد الوحدة
+start_background_fetch()
+
+# ------------------- (اختياري) تشغيل التطبيق مباشرة للاختبار المحلي -------------------
 if __name__ == '__main__':
-    # تشغيل عملية الجلب في خيط منفصل (حتى لا نوقف الخادم)
-    thread = threading.Thread(target=populate_pages_db_background)
-    thread.daemon = True  # ينتهي عند إغلاق التطبيق
-    thread.start()
-    
-    # الخادم يشتغل فوراً
-    app.run(host='0.0.0.0', port=5001, debug=False)  # ضع debug=False في الإنتاج
+    # عند التشغيل المحلي بـ python app.py، لن يبدأ خيطاً جديداً لأن start_background_fetch() قد دُعي بالفعل
+    # لكننا نضع debug=False لتجنب إعادة التشغيل المتكرر
+    app.run(host='0.0.0.0', port=5001, debug=False)
