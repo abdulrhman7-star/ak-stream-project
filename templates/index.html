@@ -1,77 +1,3425 @@
+```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أكوام – مشاهدة أفلام ومسلسلات</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <header>
-        <h1>🎬 أكوام برو</h1>
-        <div class="tabs">
-            <button class="tab active" data-tab="movies">أفلام</button>
-            <button class="tab" data-tab="series">مسلسلات</button>
-        </div>
-        <input type="text" id="search" placeholder="ابحث عن فيلم أو مسلسل...">
-    </header>
 
-    <main>
-        <div id="movies-container" class="grid"></div>
-        <div id="series-container" class="grid" style="display:none;"></div>
-        <div id="loading">⏳ جاري التحميل...</div>
-    </main>
+    <title>أكوام برو — أفلام ومسلسلات</title>
 
-    <script>
-        // جلب وعرض البيانات
-        async function fetchData(endpoint, containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '<div class="loading">⏳ جاري التحميل...</div>';
-            try {
-                const res = await fetch(`/api/${endpoint}`);
-                const data = await res.json();
-                if (data.success && data.data.length) {
-                    container.innerHTML = data.data.map(item => `
-                        <div class="card" onclick="location.href='/watch?url=${encodeURIComponent(item.link)}'">
-                            <img src="${item.image || 'https://via.placeholder.com/200x300'}" alt="${item.title}">
-                            <h3>${item.title}</h3>
-                            <div class="meta">
-                                <span>⭐ ${item.rating}</span>
-                                <span>${item.year}</span>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = '<p class="error">لا توجد بيانات</p>';
-                }
-            } catch (e) {
-                container.innerHTML = '<p class="error">حدث خطأ في التحميل</p>';
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <style>
+        :root {
+            --bg: #08090b;
+            --bg2: #101216;
+            --card: #15171c;
+            --card2: #1b1e24;
+            --border: #292d35;
+            --primary: #f5a623;
+            --primary-hover: #ffb83d;
+            --text: #ffffff;
+            --muted: #9297a1;
+            --danger: #ff5252;
+            --success: #39d98a;
+            --blue: #3688ff;
+            --shadow: 0 15px 45px rgba(0,0,0,.35);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family:
+                "Segoe UI",
+                Tahoma,
+                Arial,
+                sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at top,
+                    #17130b 0,
+                    var(--bg) 35%
+                );
+
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* =========================
+           CONTAINER
+        ========================= */
+
+        .container {
+            width: min(1500px, calc(100% - 30px));
+            margin: auto;
+        }
+
+        /* =========================
+           HEADER
+        ========================= */
+
+        header {
+            position: sticky;
+            top: 12px;
+            z-index: 100;
+
+            margin: 15px 0 25px;
+
+            padding: 14px 18px;
+
+            display: flex;
+            align-items: center;
+            gap: 15px;
+
+            background: rgba(17,18,22,.92);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+
+            backdrop-filter: blur(18px);
+
+            box-shadow: var(--shadow);
+        }
+
+        .logo {
+            white-space: nowrap;
+            font-size: 23px;
+            font-weight: 900;
+            color: var(--primary);
+        }
+
+        .logo span {
+            color: #fff;
+        }
+
+        .search-box {
+            flex: 1;
+
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-box input {
+            flex: 1;
+
+            min-width: 100px;
+
+            padding: 12px 18px;
+
+            background: #0d0f12;
+            border: 1px solid #30343c;
+            border-radius: 30px;
+
+            color: white;
+            outline: none;
+
+            transition: .2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(245,166,35,.08);
+        }
+
+        .search-box button,
+        .refresh-btn {
+            border: 0;
+            border-radius: 30px;
+
+            padding: 11px 18px;
+
+            background: var(--primary);
+            color: #111;
+
+            font-weight: 800;
+
+            transition: .2s;
+        }
+
+        .search-box button:hover,
+        .refresh-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+
+            padding: 4px;
+
+            background: #0d0f12;
+            border: 1px solid var(--border);
+            border-radius: 30px;
+        }
+
+        .nav-tabs button {
+            border: 0;
+            border-radius: 25px;
+
+            padding: 9px 16px;
+
+            color: var(--muted);
+            background: transparent;
+
+            font-weight: 700;
+        }
+
+        .nav-tabs button.active {
+            color: #111;
+            background: var(--primary);
+        }
+
+        /* =========================
+           SERVER STATUS
+        ========================= */
+
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 10px;
+
+            margin-bottom: 20px;
+            padding: 12px 15px;
+
+            background: var(--bg2);
+
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+
+            border-radius: 50%;
+            background: var(--muted);
+
+            display: inline-block;
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 10px rgba(57,217,138,.6);
+        }
+
+        .status-dot.loading {
+            background: var(--primary);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            50% {
+                opacity: .3;
             }
         }
 
-        // تحميل البيانات عند بدء التشغيل
-        fetchData('movies', 'movies-container');
-        fetchData('series', 'series-container');
+        /* =========================
+           SECTION HEADER
+        ========================= */
 
-        // التبديل بين التبويبات
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                const target = this.dataset.tab;
-                document.getElementById('movies-container').style.display = target === 'movies' ? 'grid' : 'none';
-                document.getElementById('series-container').style.display = target === 'series' ? 'grid' : 'none';
-            });
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin: 20px 0;
+        }
+
+        .section-header h2 {
+            font-size: 22px;
+        }
+
+        .section-header h2 span {
+            color: var(--primary);
+        }
+
+        .count {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        /* =========================
+           GRID
+        ========================= */
+
+        .grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fill,
+                    minmax(175px, 1fr)
+                );
+
+            gap: 20px;
+        }
+
+        /* =========================
+           CARD
+        ========================= */
+
+        .card {
+            overflow: hidden;
+
+            background: linear-gradient(
+                180deg,
+                var(--card2),
+                var(--card)
+            );
+
+            border: 1px solid var(--border);
+            border-radius: 15px;
+
+            transition:
+                transform .25s,
+                border-color .25s,
+                box-shadow .25s;
+
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-7px);
+
+            border-color: var(--primary);
+
+            box-shadow:
+                0 15px 35px rgba(0,0,0,.4);
+        }
+
+        .poster-wrapper {
+            position: relative;
+
+            aspect-ratio: 2 / 3;
+
+            overflow: hidden;
+
+            background: #202329;
+        }
+
+        .poster {
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+
+            display: block;
+
+            transition: transform .35s;
+        }
+
+        .card:hover .poster {
+            transform: scale(1.04);
+        }
+
+        .poster-overlay {
+            position: absolute;
+            inset: 0;
+
+            display: flex;
+            align-items: flex-end;
+
+            padding: 10px;
+
+            background:
+                linear-gradient(
+                    transparent 55%,
+                    rgba(0,0,0,.8)
+                );
+        }
+
+        .quality {
+            display: inline-block;
+
+            padding: 4px 8px;
+
+            border-radius: 7px;
+
+            background: var(--primary);
+            color: #111;
+
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .type-badge {
+            position: absolute;
+
+            top: 10px;
+            right: 10px;
+
+            padding: 5px 8px;
+
+            background: rgba(0,0,0,.75);
+
+            border: 1px solid rgba(255,255,255,.15);
+
+            border-radius: 7px;
+
+            font-size: 11px;
+        }
+
+        .card-info {
+            padding: 12px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 800;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+
+            margin-top: 8px;
+
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .rating {
+            color: var(--primary);
+        }
+
+        /* =========================
+           LOAD MORE
+        ========================= */
+
+        .load-more-wrapper {
+            text-align: center;
+            padding: 30px 0 50px;
+        }
+
+        .load-more {
+            border: 0;
+
+            padding: 12px 30px;
+
+            border-radius: 30px;
+
+            background: var(--primary);
+            color: #111;
+
+            font-weight: 900;
+
+            transition: .2s;
+        }
+
+        .load-more:hover {
+            background: var(--primary-hover);
+        }
+
+        .load-more:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        /* =========================
+           LOADING
+        ========================= */
+
+        .loading {
+            padding: 70px 20px;
+
+            text-align: center;
+
+            color: var(--muted);
+
+            font-size: 17px;
+        }
+
+        .spinner {
+            width: 35px;
+            height: 35px;
+
+            margin: 0 auto 15px;
+
+            border: 3px solid #333;
+            border-top-color: var(--primary);
+
+            border-radius: 50%;
+
+            animation: spin .8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* =========================
+           ERROR
+        ========================= */
+
+        .error {
+            padding: 20px;
+
+            background: rgba(255,82,82,.08);
+
+            border: 1px solid rgba(255,82,82,.3);
+
+            border-radius: 12px;
+
+            color: #ff8c8c;
+
+            text-align: center;
+        }
+
+        .retry-btn {
+            margin-top: 12px;
+
+            padding: 8px 18px;
+
+            border: 0;
+            border-radius: 20px;
+
+            background: var(--danger);
+            color: white;
+
+            font-weight: bold;
+        }
+
+        /* =========================
+           SEARCH
+        ========================= */
+
+        .search-heading {
+            margin-bottom: 20px;
+        }
+
+        .search-heading span {
+            color: var(--primary);
+        }
+
+        /* =========================
+           MODAL
+        ========================= */
+
+        .modal {
+            position: fixed;
+            inset: 0;
+
+            z-index: 1000;
+
+            display: none;
+
+            padding: 20px;
+
+            background: rgba(0,0,0,.94);
+
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        .modal-content {
+            width: min(1150px, 100%);
+
+            margin: 20px auto;
+
+            overflow: hidden;
+
+            background: #101216;
+
+            border: 1px solid var(--border);
+            border-radius: 18px;
+
+            box-shadow: 0 25px 80px rgba(0,0,0,.6);
+        }
+
+        .modal-header {
+            display: flex;
+
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 15px;
+
+            padding: 14px 18px;
+
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .close-btn {
+            border: 0;
+
+            width: 38px;
+            height: 38px;
+
+            border-radius: 50%;
+
+            background: #2a2d34;
+            color: white;
+
+            font-size: 20px;
+        }
+
+        .close-btn:hover {
+            background: var(--danger);
+        }
+
+        /* =========================
+           VIDEO
+        ========================= */
+
+        .video-wrapper {
+            position: relative;
+
+            width: 100%;
+
+            background: #000;
+        }
+
+        video {
+            display: block;
+
+            width: 100%;
+
+            max-height: 70vh;
+
+            background: #000;
+        }
+
+        .player-loading {
+            display: none;
+
+            position: absolute;
+            inset: 0;
+
+            align-items: center;
+            justify-content: center;
+
+            background: rgba(0,0,0,.5);
+
+            color: white;
+        }
+
+        .player-loading.active {
+            display: flex;
+        }
+
+        /* =========================
+           LINKS
+        ========================= */
+
+        .links-section {
+            padding: 20px;
+        }
+
+        .links-title {
+            margin-bottom: 12px;
+
+            color: var(--primary);
+
+            font-size: 16px;
+        }
+
+        .links-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+
+            margin-bottom: 25px;
+        }
+
+        .quality-btn,
+        .download-btn {
+            border: 0;
+
+            padding: 9px 15px;
+
+            border-radius: 22px;
+
+            font-size: 13px;
+            font-weight: 800;
+
+            transition: .2s;
+        }
+
+        .quality-btn {
+            background: var(--primary);
+            color: #111;
+        }
+
+        .quality-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .quality-btn.active {
+            box-shadow:
+                0 0 0 2px white inset;
+        }
+
+        .download-btn {
+            background: var(--blue);
+            color: white;
+
+            text-decoration: none;
+        }
+
+        .download-btn:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+
+        /* =========================
+           SERIES
+        ========================= */
+
+        .series-info {
+            padding: 18px;
+
+            border-bottom: 1px solid var(--border);
+        }
+
+        .episodes-title {
+            margin-bottom: 15px;
+
+            color: var(--primary);
+            font-weight: 900;
+        }
+
+        .episodes {
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fill,
+                    minmax(150px, 1fr)
+                );
+
+            gap: 10px;
+        }
+
+        .episode-btn {
+            padding: 12px;
+
+            background: #1b1e24;
+
+            border: 1px solid var(--border);
+            border-radius: 10px;
+
+            color: white;
+
+            text-align: right;
+
+            transition: .2s;
+        }
+
+        .episode-btn:hover,
+        .episode-btn.active {
+            border-color: var(--primary);
+            background: rgba(245,166,35,.08);
+        }
+
+        .episode-number {
+            display: block;
+
+            color: var(--primary);
+
+            font-weight: 900;
+
+            margin-bottom: 4px;
+        }
+
+        .episode-name {
+            display: block;
+
+            overflow: hidden;
+
+            white-space: nowrap;
+            text-overflow: ellipsis;
+
+            color: var(--muted);
+
+            font-size: 12px;
+        }
+
+        /* =========================
+           TOAST
+        ========================= */
+
+        .toast {
+            position: fixed;
+
+            bottom: 25px;
+            right: 25px;
+
+            z-index: 3000;
+
+            max-width: 350px;
+
+            padding: 13px 18px;
+
+            background: #20242b;
+
+            border: 1px solid var(--border);
+            border-radius: 12px;
+
+            box-shadow: var(--shadow);
+
+            transform: translateY(120px);
+
+            opacity: 0;
+
+            transition: .3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 900px) {
+
+            header {
+                flex-wrap: wrap;
+            }
+
+            .logo {
+                width: 100%;
+                text-align: center;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .nav-tabs {
+                width: 100%;
+            }
+
+            .nav-tabs button {
+                flex: 1;
+            }
+
+            .grid {
+                grid-template-columns:
+                    repeat(
+                        auto-fill,
+                        minmax(145px, 1fr)
+                    );
+
+                gap: 13px;
+            }
+        }
+
+        @media (max-width: 500px) {
+
+            .container {
+                width: min(
+                    100% - 16px,
+                    1500px
+                );
+            }
+
+            header {
+                top: 5px;
+                padding: 12px;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .search-box button {
+                width: 100%;
+            }
+
+            .grid {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+
+                gap: 10px;
+            }
+
+            .card-info {
+                padding: 9px;
+            }
+
+            .card-title {
+                font-size: 13px;
+            }
+
+            .modal {
+                padding: 5px;
+            }
+
+            .modal-content {
+                margin: 5px auto;
+                border-radius: 12px;
+            }
+
+            .links-section {
+                padding: 12px;
+            }
+
+            .episodes {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .status-left {
+                width: 100%;
+            }
+
+            .refresh-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- =========================
+         HEADER
+    ========================== -->
+
+    <header>
+
+        <div class="logo">
+            🎬 <span>أكوام</span> برو
+        </div>
+
+        <div class="search-box">
+
+            <input
+                id="searchInput"
+                type="search"
+                autocomplete="off"
+                placeholder="ابحث عن فيلم أو مسلسل..."
+            >
+
+            <button id="searchBtn">
+                🔍 بحث
+            </button>
+
+        </div>
+
+        <div class="nav-tabs">
+
+            <button
+                id="showMoviesBtn"
+                class="active"
+            >
+                🎬 أفلام
+            </button>
+
+            <button
+                id="showSeriesBtn"
+            >
+                📺 مسلسلات
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         STATUS
+    ========================== -->
+
+    <div class="status-bar">
+
+        <div class="status-left">
+
+            <span>
+                <span
+                    id="statusDot"
+                    class="status-dot"
+                ></span>
+
+                <span id="statusText">
+                    جاري الاتصال بالخادم...
+                </span>
+            </span>
+
+            <span>
+                🎬 <b id="moviesCount">0</b>
+            </span>
+
+            <span>
+                📺 <b id="seriesCount">0</b>
+            </span>
+
+            <span>
+                📄 <b id="pagesCount">0</b>
+            </span>
+
+        </div>
+
+        <button
+            id="refreshBtn"
+            class="refresh-btn"
+        >
+            🔄 تحديث البيانات
+        </button>
+
+    </div>
+
+
+    <!-- =========================
+         MOVIES
+    ========================== -->
+
+    <section id="moviesWrapper">
+
+        <div class="section-header">
+
+            <h2>
+                🎬 <span>الأفلام</span>
+            </h2>
+
+            <span
+                id="moviesTotal"
+                class="count"
+            >
+                0 فيلم
+            </span>
+
+        </div>
+
+        <div
+            id="moviesLoading"
+            class="loading"
+        >
+            <div class="spinner"></div>
+            جاري تحميل الأفلام...
+        </div>
+
+        <div
+            id="moviesGrid"
+            class="grid"
+        ></div>
+
+        <div class="load-more-wrapper">
+
+            <button
+                id="loadMoreMovies"
+                class="load-more"
+            >
+                تحميل المزيد
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         SERIES
+    ========================== -->
+
+    <section
+        id="seriesWrapper"
+        class="hidden"
+    >
+
+        <div class="section-header">
+
+            <h2>
+                📺 <span>المسلسلات</span>
+            </h2>
+
+            <span
+                id="seriesTotal"
+                class="count"
+            >
+                0 مسلسل
+            </span>
+
+        </div>
+
+        <div
+            id="seriesLoading"
+            class="loading"
+        >
+            <div class="spinner"></div>
+            جاري تحميل المسلسلات...
+        </div>
+
+        <div
+            id="seriesGrid"
+            class="grid"
+        ></div>
+
+        <div class="load-more-wrapper">
+
+            <button
+                id="loadMoreSeries"
+                class="load-more"
+            >
+                تحميل المزيد
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         SEARCH
+    ========================== -->
+
+    <section
+        id="searchResults"
+        class="hidden"
+    >
+
+        <div class="section-header search-heading">
+
+            <h2>
+                🔎 نتائج البحث عن:
+                <span id="searchQuery"></span>
+            </h2>
+
+            <span
+                id="searchCount"
+                class="count"
+            >
+                0 نتيجة
+            </span>
+
+        </div>
+
+        <div
+            id="searchGrid"
+            class="grid"
+        ></div>
+
+    </section>
+
+</div>
+
+
+<!-- =========================
+     PLAYER MODAL
+========================== -->
+
+<div
+    id="playerModal"
+    class="modal"
+>
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <div
+                id="playerTitle"
+                class="modal-title"
+            >
+                🎥 المشاهدة
+            </div>
+
+            <button
+                id="closePlayer"
+                class="close-btn"
+                title="إغلاق"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="video-wrapper">
+
+            <video
+                id="videoPlayer"
+                controls
+                playsinline
+                preload="metadata"
+            ></video>
+
+            <div
+                id="playerLoading"
+                class="player-loading"
+            >
+                ⏳ جاري تشغيل الفيديو...
+            </div>
+
+        </div>
+
+
+        <div class="links-section">
+
+            <h3 class="links-title">
+                📺 جودة المشاهدة
+            </h3>
+
+            <div
+                id="qualityLinks"
+                class="links-grid"
+            >
+                <span class="count">
+                    جاري تحميل الروابط...
+                </span>
+            </div>
+
+
+            <h3 class="links-title">
+                ⬇️ روابط التحميل
+            </h3>
+
+            <div
+                id="downloadLinks"
+                class="links-grid"
+            >
+                <span class="count">
+                    لا توجد روابط بعد
+                </span>
+            </div>
+
+        </div>
+
+
+        <!-- حلقات المسلسل -->
+
+        <div
+            id="seriesEpisodesSection"
+            class="series-info hidden"
+        >
+
+            <div class="episodes-title">
+                📺 الحلقات
+            </div>
+
+            <div
+                id="episodes"
+                class="episodes"
+            ></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- TOAST -->
+
+<div
+    id="toast"
+    class="toast"
+></div>
+
+
+<script>
+
+/* =========================================================
+   CONFIG
+========================================================= */
+
+const API_BASE =
+    'https://penknife-reshuffle-subsonic.ngrok-free.dev';
+
+const PAGE_SIZE = 24;
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let allMovies = [];
+let allSeries = [];
+
+let moviesPage = 1;
+let seriesPage = 1;
+
+let currentVideoUrl = null;
+
+let hlsInstance = null;
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const moviesGrid =
+    document.getElementById('moviesGrid');
+
+const seriesGrid =
+    document.getElementById('seriesGrid');
+
+const searchGrid =
+    document.getElementById('searchGrid');
+
+const searchInput =
+    document.getElementById('searchInput');
+
+const searchBtn =
+    document.getElementById('searchBtn');
+
+const playerModal =
+    document.getElementById('playerModal');
+
+const videoPlayer =
+    document.getElementById('videoPlayer');
+
+const playerTitle =
+    document.getElementById('playerTitle');
+
+const playerLoading =
+    document.getElementById('playerLoading');
+
+const qualityLinks =
+    document.getElementById('qualityLinks');
+
+const downloadLinks =
+    document.getElementById('downloadLinks');
+
+const episodes =
+    document.getElementById('episodes');
+
+const seriesEpisodesSection =
+    document.getElementById(
+        'seriesEpisodesSection'
+    );
+
+const toast =
+    document.getElementById('toast');
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function escapeHTML(value) {
+
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+}
+
+
+function safeURL(url) {
+
+    if (!url) return '';
+
+    try {
+
+        const parsed =
+            new URL(url, API_BASE);
+
+        if (
+            parsed.protocol !== 'http:' &&
+            parsed.protocol !== 'https:'
+        ) {
+            return '';
+        }
+
+        return parsed.href;
+
+    } catch {
+
+        return '';
+
+    }
+
+}
+
+
+function imageURL(url) {
+
+    return safeURL(url) ||
+        'https://placehold.co/400x600/191b20/888?text=No+Image';
+
+}
+
+
+function showToast(message) {
+
+    toast.textContent = message;
+
+    toast.classList.add('show');
+
+    clearTimeout(
+        showToast.timer
+    );
+
+    showToast.timer =
+        setTimeout(() => {
+
+            toast.classList.remove('show');
+
+        }, 3000);
+
+}
+
+
+function setStatus(
+    text,
+    state = ''
+) {
+
+    const dot =
+        document.getElementById(
+            'statusDot'
+        );
+
+    const statusText =
+        document.getElementById(
+            'statusText'
+        );
+
+    statusText.textContent = text;
+
+    dot.className =
+        'status-dot ' + state;
+
+}
+
+
+async function fetchJSON(
+    endpoint,
+    options = {}
+) {
+
+    const response =
+        await fetch(
+            `${API_BASE}${endpoint}`,
+            {
+                ...options,
+                headers: {
+                    Accept:
+                        'application/json',
+                    ...(options.headers || {})
+                }
+            }
+        );
+
+    let data;
+
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(
+            `استجابة غير صالحة من الخادم (${response.status})`
+        );
+    }
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.error ||
+            data.message ||
+            `خطأ HTTP ${response.status}`
+        );
+
+    }
+
+    return data;
+
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+async function loadStatus() {
+
+    try {
+
+        const data =
+            await fetchJSON(
+                '/api/status'
+            );
+
+        if (!data.success) {
+            throw new Error(
+                'تعذر الحصول على الحالة'
+            );
+        }
+
+        document.getElementById(
+            'moviesCount'
+        ).textContent =
+            Number(data.movies || 0).toLocaleString('ar');
+
+        document.getElementById(
+            'seriesCount'
+        ).textContent =
+            Number(data.series || 0).toLocaleString('ar');
+
+        document.getElementById(
+            'pagesCount'
+        ).textContent =
+            Number(data.pages || 0).toLocaleString('ar');
+
+        if (data.loading) {
+
+            setStatus(
+                'الخادم يجلب البيانات...',
+                'loading'
+            );
+
+        } else if (data.ready) {
+
+            setStatus(
+                'الخادم جاهز',
+                'online'
+            );
+
+        } else {
+
+            setStatus(
+                'في انتظار البيانات',
+                ''
+            );
+
+        }
+
+        return data;
+
+    } catch (error) {
+
+        setStatus(
+            'تعذر الاتصال بالخادم',
+            ''
+        );
+
+        console.error(error);
+
+        return null;
+
+    }
+
+}
+
+
+/* =========================================================
+   CARD
+========================================================= */
+
+function createCard(item) {
+
+    const card =
+        document.createElement('article');
+
+    card.className = 'card';
+
+    const type =
+        item.type === 'series'
+            ? 'مسلسل'
+            : 'فيلم';
+
+    const quality =
+        item.quality ||
+        '';
+
+    card.innerHTML = `
+
+        <div class="poster-wrapper">
+
+            <img
+                class="poster"
+                src="${escapeHTML(
+                    imageURL(item.image)
+                )}"
+                alt="${escapeHTML(
+                    item.title || 'بدون عنوان'
+                )}"
+                loading="lazy"
+            >
+
+            <div class="poster-overlay">
+
+                ${
+                    quality
+                    ? `
+                        <span class="quality">
+                            ${escapeHTML(quality)}
+                        </span>
+                    `
+                    : ''
+                }
+
+            </div>
+
+            <span class="type-badge">
+                ${type}
+            </span>
+
+        </div>
+
+        <div class="card-info">
+
+            <div
+                class="card-title"
+                title="${escapeHTML(
+                    item.title || ''
+                )}"
+            >
+                ${escapeHTML(
+                    item.title || 'غير معروف'
+                )}
+            </div>
+
+            <div class="card-meta">
+
+                <span>
+                    ${escapeHTML(
+                        item.year || '----'
+                    )}
+                </span>
+
+                <span class="rating">
+                    ⭐ ${escapeHTML(
+                        item.rating || '0.0'
+                    )}
+                </span>
+
+            </div>
+
+        </div>
+    `;
+
+
+    card
+        .querySelector('img')
+        .addEventListener(
+            'error',
+            function () {
+
+                this.src =
+                    'https://placehold.co/400x600/191b20/888?text=No+Image';
+
+            },
+            { once: true }
+        );
+
+
+    card.addEventListener(
+        'click',
+        () => {
+
+            if (item.type === 'series') {
+
+                openSeries(item);
+
+            } else {
+
+                openMovie(item);
+
+            }
+
+        }
+    );
+
+
+    return card;
+
+}
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function renderCards(
+    items,
+    container,
+    append = false
+) {
+
+    if (!append) {
+
+        container.innerHTML = '';
+
+    }
+
+    if (!items || !items.length) {
+
+        if (!append) {
+
+            container.innerHTML =
+                `
+                <div class="error">
+                    لا توجد عناصر لعرضها.
+                </div>
+                `;
+
+        }
+
+        return;
+
+    }
+
+    const fragment =
+        document.createDocumentFragment();
+
+    items.forEach(item => {
+
+        fragment.appendChild(
+            createCard(item)
+        );
+
+    });
+
+    container.appendChild(fragment);
+
+}
+
+
+/* =========================================================
+   MOVIES
+========================================================= */
+
+async function loadMovies() {
+
+    const loading =
+        document.getElementById(
+            'moviesLoading'
+        );
+
+    loading.classList.remove(
+        'hidden'
+    );
+
+    try {
+
+        const data =
+            await fetchJSON(
+                '/api/all-movies'
+            );
+
+        if (!data.success) {
+
+            throw new Error(
+                data.error ||
+                'فشل تحميل الأفلام'
+            );
+
+        }
+
+        allMovies =
+            Array.isArray(data.data)
+                ? data.data
+                : [];
+
+        moviesPage = 1;
+
+        renderCards(
+            allMovies.slice(
+                0,
+                PAGE_SIZE
+            ),
+            moviesGrid
+        );
+
+        document.getElementById(
+            'moviesTotal'
+        ).textContent =
+            `${allMovies.length.toLocaleString('ar')} فيلم`;
+
+        updateLoadMoreButton(
+            'movies'
+        );
+
+    } catch (error) {
+
+        moviesGrid.innerHTML =
+            `
+            <div class="error">
+                ⚠️ ${escapeHTML(
+                    error.message
+                )}
+
+                <br>
+
+                <button
+                    class="retry-btn"
+                    onclick="loadMovies()"
+                >
+                    إعادة المحاولة
+                </button>
+            </div>
+            `;
+
+    } finally {
+
+        loading.classList.add(
+            'hidden'
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SERIES
+========================================================= */
+
+async function loadSeries() {
+
+    const loading =
+        document.getElementById(
+            'seriesLoading'
+        );
+
+    loading.classList.remove(
+        'hidden'
+    );
+
+    try {
+
+        const data =
+            await fetchJSON(
+                '/api/all-series'
+            );
+
+        if (!data.success) {
+
+            throw new Error(
+                data.error ||
+                'فشل تحميل المسلسلات'
+            );
+
+        }
+
+        allSeries =
+            Array.isArray(data.data)
+                ? data.data
+                : [];
+
+        allSeries.forEach(
+            item => item.type = 'series'
+        );
+
+        seriesPage = 1;
+
+        renderCards(
+            allSeries.slice(
+                0,
+                PAGE_SIZE
+            ),
+            seriesGrid
+        );
+
+        document.getElementById(
+            'seriesTotal'
+        ).textContent =
+            `${allSeries.length.toLocaleString('ar')} مسلسل`;
+
+        updateLoadMoreButton(
+            'series'
+        );
+
+    } catch (error) {
+
+        seriesGrid.innerHTML =
+            `
+            <div class="error">
+                ⚠️ ${escapeHTML(
+                    error.message
+                )}
+
+                <br>
+
+                <button
+                    class="retry-btn"
+                    onclick="loadSeries()"
+                >
+                    إعادة المحاولة
+                </button>
+            </div>
+            `;
+
+    } finally {
+
+        loading.classList.add(
+            'hidden'
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   LOAD MORE
+========================================================= */
+
+function updateLoadMoreButton(
+    type
+) {
+
+    const button =
+        type === 'movies'
+            ? document.getElementById(
+                'loadMoreMovies'
+            )
+            : document.getElementById(
+                'loadMoreSeries'
+            );
+
+    const collection =
+        type === 'movies'
+            ? allMovies
+            : allSeries;
+
+    const page =
+        type === 'movies'
+            ? moviesPage
+            : seriesPage;
+
+    const displayed =
+        page * PAGE_SIZE;
+
+    if (displayed >= collection.length) {
+
+        button.disabled = true;
+
+        button.textContent =
+            collection.length
+                ? '✓ تم تحميل الكل'
+                : 'لا توجد عناصر';
+
+    } else {
+
+        button.disabled = false;
+
+        button.textContent =
+            `تحميل المزيد (${Math.min(
+                PAGE_SIZE,
+                collection.length - displayed
+            )})`;
+
+    }
+
+}
+
+
+function loadMoreMovies() {
+
+    const start =
+        moviesPage * PAGE_SIZE;
+
+    const batch =
+        allMovies.slice(
+            start,
+            start + PAGE_SIZE
+        );
+
+    renderCards(
+        batch,
+        moviesGrid,
+        true
+    );
+
+    moviesPage++;
+
+    updateLoadMoreButton(
+        'movies'
+    );
+
+}
+
+
+function loadMoreSeries() {
+
+    const start =
+        seriesPage * PAGE_SIZE;
+
+    const batch =
+        allSeries.slice(
+            start,
+            start + PAGE_SIZE
+        );
+
+    renderCards(
+        batch,
+        seriesGrid,
+        true
+    );
+
+    seriesPage++;
+
+    updateLoadMoreButton(
+        'series'
+    );
+
+}
+
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+let searchTimer = null;
+
+
+async function performSearch(
+    query
+) {
+
+    query =
+        query.trim();
+
+    if (!query) {
+
+        showHome();
+
+        return;
+
+    }
+
+    document.getElementById(
+        'moviesWrapper'
+    ).classList.add('hidden');
+
+    document.getElementById(
+        'seriesWrapper'
+    ).classList.add('hidden');
+
+    document.getElementById(
+        'searchResults'
+    ).classList.remove('hidden');
+
+    document.getElementById(
+        'searchQuery'
+    ).textContent = query;
+
+    searchGrid.innerHTML =
+        `
+        <div class="loading">
+            <div class="spinner"></div>
+            جاري البحث...
+        </div>
+        `;
+
+    try {
+
+        const data =
+            await fetchJSON(
+                `/api/search?q=${encodeURIComponent(
+                    query
+                )}`
+            );
+
+        const results =
+            Array.isArray(data.data)
+                ? data.data
+                : [];
+
+        results.forEach(item => {
+
+            if (!item.type) {
+
+                item.type =
+                    item.link &&
+                    item.link.includes(
+                        '/series/'
+                    )
+                    ? 'series'
+                    : 'movie';
+
+            }
+
         });
 
-        // البحث
-        document.getElementById('search').addEventListener('input', function() {
-            const query = this.value.toLowerCase();
-            document.querySelectorAll('.card').forEach(card => {
-                const title = card.querySelector('h3').textContent.toLowerCase();
-                card.style.display = title.includes(query) ? 'block' : 'none';
+        document.getElementById(
+            'searchCount'
+        ).textContent =
+            `${results.length.toLocaleString('ar')} نتيجة`;
+
+        renderCards(
+            results,
+            searchGrid
+        );
+
+    } catch (error) {
+
+        searchGrid.innerHTML =
+            `
+            <div class="error">
+                ⚠️ ${escapeHTML(
+                    error.message
+                )}
+            </div>
+            `;
+
+    }
+
+}
+
+
+function showHome() {
+
+    document.getElementById(
+        'searchResults'
+    ).classList.add('hidden');
+
+    document.getElementById(
+        'moviesWrapper'
+    ).classList.remove('hidden');
+
+    document.getElementById(
+        'seriesWrapper'
+    ).classList.add('hidden');
+
+    document.getElementById(
+        'showMoviesBtn'
+    ).classList.add('active');
+
+    document.getElementById(
+        'showSeriesBtn'
+    ).classList.remove('active');
+
+}
+
+
+/* =========================================================
+   MOVIE PLAYER
+========================================================= */
+
+async function openMovie(
+    movie
+) {
+
+    if (!movie.link) {
+
+        showToast(
+            '⚠️ لا يوجد رابط لهذا العنصر'
+        );
+
+        return;
+
+    }
+
+    playerModal.classList.add(
+        'active'
+    );
+
+    document.body.style.overflow =
+        'hidden';
+
+    playerTitle.textContent =
+        `🎥 ${movie.title || 'المشاهدة'}`;
+
+    qualityLinks.innerHTML =
+        `
+        <span class="count">
+            ⏳ جاري تحميل الجودات...
+        </span>
+        `;
+
+    downloadLinks.innerHTML =
+        `
+        <span class="count">
+            جاري تحميل الروابط...
+        </span>
+        `;
+
+    seriesEpisodesSection.classList.add(
+        'hidden'
+    );
+
+    stopVideo();
+
+
+    try {
+
+        const data =
+            await fetchJSON(
+                `/api/movie-links?url=${encodeURIComponent(
+                    movie.link
+                )}`
+            );
+
+        /*
+         * app.py الحالي يعيد:
+         *
+         * {
+         *   success: true,
+         *   links: [...]
+         * }
+         *
+         * لذلك نستخدم data.links
+         */
+
+        const links =
+            Array.isArray(data.links)
+                ? data.links
+                : Array.isArray(data.data)
+                    ? data.data
+                    : [];
+
+        if (!links.length) {
+
+            qualityLinks.innerHTML =
+                `
+                <span class="count">
+                    لا توجد روابط مشاهدة متاحة.
+                </span>
+                `;
+
+            downloadLinks.innerHTML =
+                `
+                <span class="count">
+                    لا توجد روابط تحميل متاحة.
+                </span>
+                `;
+
+            return;
+
+        }
+
+
+        renderVideoLinks(
+            links
+        );
+
+
+        /*
+         * التشغيل التلقائي لأول رابط صالح
+         */
+
+        const first =
+            links.find(
+                item => item.watch
+            );
+
+        if (first) {
+
+            setTimeout(
+                () => {
+
+                    playVideo(
+                        first.watch,
+                        first.quality
+                    );
+
+                },
+                100
+            );
+
+        }
+
+    } catch (error) {
+
+        qualityLinks.innerHTML =
+            `
+            <div class="error">
+                ⚠️ ${escapeHTML(
+                    error.message
+                )}
+            </div>
+            `;
+
+        downloadLinks.innerHTML =
+            '';
+
+    }
+
+}
+
+
+/* =========================================================
+   VIDEO LINKS
+========================================================= */
+
+function renderVideoLinks(
+    links
+) {
+
+    qualityLinks.innerHTML =
+        '';
+
+    downloadLinks.innerHTML =
+        '';
+
+
+    let watchCount = 0;
+    let downloadCount = 0;
+
+
+    links.forEach(
+        (link, index) => {
+
+            const quality =
+                link.quality ||
+                `جودة ${index + 1}`;
+
+
+            if (link.watch) {
+
+                const button =
+                    document.createElement(
+                        'button'
+                    );
+
+                button.className =
+                    'quality-btn';
+
+                button.textContent =
+                    `▶ ${quality}`;
+
+                button.addEventListener(
+                    'click',
+                    () => {
+
+                        document
+                            .querySelectorAll(
+                                '.quality-btn'
+                            )
+                            .forEach(
+                                btn =>
+                                    btn.classList
+                                        .remove(
+                                            'active'
+                                        )
+                            );
+
+                        button.classList.add(
+                            'active'
+                        );
+
+                        playVideo(
+                            link.watch,
+                            quality
+                        );
+
+                    }
+                );
+
+                qualityLinks.appendChild(
+                    button
+                );
+
+                watchCount++;
+
+            }
+
+
+            if (link.download) {
+
+                const url =
+                    safeURL(
+                        link.download
+                    );
+
+                if (url) {
+
+                    const a =
+                        document.createElement(
+                            'a'
+                        );
+
+                    a.className =
+                        'download-btn';
+
+                    a.href = url;
+
+                    a.target = '_blank';
+
+                    a.rel =
+                        'noopener noreferrer';
+
+                    a.textContent =
+                        `⬇ ${quality}`;
+
+                    downloadLinks.appendChild(
+                        a
+                    );
+
+                    downloadCount++;
+
+                }
+
+            }
+
+        }
+    );
+
+
+    if (!watchCount) {
+
+        qualityLinks.innerHTML =
+            `
+            <span class="count">
+                لا توجد روابط مشاهدة.
+            </span>
+            `;
+
+    }
+
+
+    if (!downloadCount) {
+
+        downloadLinks.innerHTML =
+            `
+            <span class="count">
+                لا توجد روابط تحميل.
+            </span>
+            `;
+
+    }
+
+}
+
+
+/* =========================================================
+   PLAY VIDEO
+========================================================= */
+
+async function playVideo(
+    url,
+    quality = ''
+) {
+
+    const videoURL =
+        safeURL(url);
+
+    if (!videoURL) {
+
+        showToast(
+            '⚠️ رابط الفيديو غير صالح'
+        );
+
+        return;
+
+    }
+
+    currentVideoUrl =
+        videoURL;
+
+    playerLoading.classList.add(
+        'active'
+    );
+
+    stopVideo(false);
+
+
+    try {
+
+        /*
+         * HLS
+         */
+
+        const isHLS =
+            /\.m3u8($|\?)/i.test(
+                videoURL
+            );
+
+
+        if (
+            isHLS &&
+            window.Hls &&
+            Hls.isSupported()
+        ) {
+
+            hlsInstance =
+                new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: false
+                });
+
+            hlsInstance.loadSource(
+                videoURL
+            );
+
+            hlsInstance.attachMedia(
+                videoPlayer
+            );
+
+            hlsInstance.on(
+                Hls.Events.MANIFEST_PARSED,
+                () => {
+
+                    playerLoading.classList
+                        .remove(
+                            'active'
+                        );
+
+                    videoPlayer.play()
+                        .catch(() => {});
+
+                }
+            );
+
+            hlsInstance.on(
+                Hls.Events.ERROR,
+                (
+                    event,
+                    data
+                ) => {
+
+                    console.error(
+                        'HLS error:',
+                        data
+                    );
+
+                    if (
+                        data.fatal
+                    ) {
+
+                        playerLoading.classList
+                            .remove(
+                                'active'
+                            );
+
+                        showToast(
+                            '⚠️ تعذر تشغيل بث HLS'
+                        );
+
+                    }
+
+                }
+            );
+
+            return;
+
+        }
+
+
+        /*
+         * Native HLS
+         * Safari / iOS
+         */
+
+        if (
+            isHLS &&
+            videoPlayer.canPlayType(
+                'application/vnd.apple.mpegurl'
+            )
+        ) {
+
+            videoPlayer.src =
+                videoURL;
+
+            videoPlayer.load();
+
+            playerLoading.classList
+                .remove(
+                    'active'
+                );
+
+            await videoPlayer.play()
+                .catch(() => {});
+
+            return;
+
+        }
+
+
+        /*
+         * MP4 / WebM
+         */
+
+        videoPlayer.src =
+            videoURL;
+
+        videoPlayer.load();
+
+        playerLoading.classList
+            .remove(
+                'active'
+            );
+
+        await videoPlayer.play()
+            .catch(() => {
+
+                /*
+                 * المتصفح قد يمنع autoplay
+                 */
+
             });
-        });
-    </script>
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        playerLoading.classList
+            .remove(
+                'active'
+            );
+
+        showToast(
+            '⚠️ تعذر تشغيل الفيديو'
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   STOP VIDEO
+========================================================= */
+
+function stopVideo(
+    clearSource = true
+) {
+
+    if (hlsInstance) {
+
+        try {
+
+            hlsInstance.destroy();
+
+        } catch {}
+
+        hlsInstance = null;
+
+    }
+
+    try {
+
+        videoPlayer.pause();
+
+    } catch {}
+
+
+    if (clearSource) {
+
+        videoPlayer.removeAttribute(
+            'src'
+        );
+
+        videoPlayer.load();
+
+    }
+
+    playerLoading.classList.remove(
+        'active'
+    );
+
+    currentVideoUrl = null;
+
+}
+
+
+/* =========================================================
+   SERIES
+========================================================= */
+
+async function openSeries(
+    series
+) {
+
+    if (!series.link) {
+
+        showToast(
+            '⚠️ لا يوجد رابط لهذا المسلسل'
+        );
+
+        return;
+
+    }
+
+    playerModal.classList.add(
+        'active'
+    );
+
+    document.body.style.overflow =
+        'hidden';
+
+    playerTitle.textContent =
+        `📺 ${series.title || 'المسلسل'}`;
+
+    qualityLinks.innerHTML =
+        `
+        <span class="count">
+            اختر حلقة للبدء...
+        </span>
+        `;
+
+    downloadLinks.innerHTML =
+        '';
+
+    seriesEpisodesSection.classList
+        .remove('hidden');
+
+    episodes.innerHTML =
+        `
+        <div class="loading">
+            <div class="spinner"></div>
+            جاري تحميل الحلقات...
+        </div>
+        `;
+
+    stopVideo();
+
+
+    try {
+
+        const data =
+            await fetchJSON(
+                `/api/series-episodes?url=${encodeURIComponent(
+                    series.link
+                )}`
+            );
+
+        const list =
+            Array.isArray(data.episodes)
+                ? data.episodes
+                : Array.isArray(data.data)
+                    ? data.data
+                    : [];
+
+        renderEpisodes(
+            list
+        );
+
+    } catch (error) {
+
+        episodes.innerHTML =
+            `
+            <div class="error">
+                ⚠️ ${escapeHTML(
+                    error.message
+                )}
+            </div>
+            `;
+
+    }
+
+}
+
+
+/* =========================================================
+   EPISODES
+========================================================= */
+
+function renderEpisodes(
+    list
+) {
+
+    episodes.innerHTML =
+        '';
+
+    if (!list.length) {
+
+        episodes.innerHTML =
+            `
+            <div class="error">
+                لا توجد حلقات متاحة.
+            </div>
+            `;
+
+        return;
+
+    }
+
+
+    const fragment =
+        document.createDocumentFragment();
+
+
+    list.forEach(
+        (episode, index) => {
+
+            const button =
+                document.createElement(
+                    'button'
+                );
+
+            button.className =
+                'episode-btn';
+
+            button.innerHTML = `
+
+                <span class="episode-number">
+                    الحلقة ${escapeHTML(
+                        episode.number ||
+                        String(index + 1)
+                    )}
+                </span>
+
+                <span class="episode-name">
+                    ${escapeHTML(
+                        episode.title ||
+                        `الحلقة ${index + 1}`
+                    )}
+                </span>
+
+            `;
+
+
+            button.addEventListener(
+                'click',
+                async () => {
+
+                    document
+                        .querySelectorAll(
+                            '.episode-btn'
+                        )
+                        .forEach(
+                            b =>
+                                b.classList
+                                    .remove(
+                                        'active'
+                                    )
+                        );
+
+                    button.classList.add(
+                        'active'
+                    );
+
+                    await openEpisode(
+                        episode
+                    );
+
+                }
+            );
+
+
+            fragment.appendChild(
+                button
+            );
+
+        }
+    );
+
+
+    episodes.appendChild(
+        fragment
+    );
+
+}
+
+
+/* =========================================================
+   OPEN EPISODE
+========================================================= */
+
+async function openEpisode(
+    episode
+) {
+
+    if (!episode.url) {
+
+        showToast(
+            '⚠️ رابط الحلقة غير متوفر'
+        );
+
+        return;
+
+    }
+
+
+    qualityLinks.innerHTML =
+        `
+        <span class="count">
+            ⏳ جاري جلب رابط الحلقة...
+        </span>
+        `;
+
+    downloadLinks.innerHTML =
+        '';
+
+
+    try {
+
+        const data =
+            await fetchJSON(
+                `/api/movie-links?url=${encodeURIComponent(
+                    episode.url
+                )}`
+            );
+
+        const links =
+            Array.isArray(data.links)
+                ? data.links
+                : Array.isArray(data.data)
+                    ? data.data
+                    : [];
+
+
+        if (!links.length) {
+
+            qualityLinks.innerHTML =
+                `
+                <span class="count">
+                    لا توجد روابط تشغيل للحلقة.
+                </span>
+                `;
+
+            return;
+
+        }
+
+
+        renderVideoLinks(
+            links
+        );
+
+
+        const first =
+            links.find(
+                item => item.watch
+            );
+
+        if (first) {
+
+            playVideo(
+                first.watch,
+                first.quality
+            );
+
+        }
+
+    } catch (error) {
+
+        qualityLinks.innerHTML =
+            `
+            <div class="error">
+                ⚠️ ${escapeHTML(
+                    error.message
+                )}
+            </div>
+            `;
+
+    }
+
+}
+
+
+/* =========================================================
+   CLOSE PLAYER
+========================================================= */
+
+function closePlayer() {
+
+    playerModal.classList.remove(
+        'active'
+    );
+
+    document.body.style.overflow =
+        '';
+
+    stopVideo();
+
+    qualityLinks.innerHTML =
+        '';
+
+    downloadLinks.innerHTML =
+        '';
+
+    episodes.innerHTML =
+        '';
+
+    seriesEpisodesSection.classList
+        .add('hidden');
+
+}
+
+
+/* =========================================================
+   REFRESH
+========================================================= */
+
+async function refreshData() {
+
+    const button =
+        document.getElementById(
+            'refreshBtn'
+        );
+
+    const oldText =
+        button.textContent;
+
+    button.disabled = true;
+
+    button.textContent =
+        '⏳ جاري التحديث...';
+
+    try {
+
+        const data =
+            await fetchJSON(
+                '/api/refresh',
+                {
+                    method: 'POST'
+                }
+            );
+
+        showToast(
+            data.message ||
+            'بدأ تحديث البيانات'
+        );
+
+        setStatus(
+            'جاري تحديث البيانات...',
+            'loading'
+        );
+
+        /*
+         * نراقب الحالة حتى يصبح الخادم جاهزاً
+         */
+
+        let attempts = 0;
+
+        const monitor =
+            setInterval(
+                async () => {
+
+                    attempts++;
+
+                    const status =
+                        await loadStatus();
+
+                    if (
+                        status &&
+                        !status.loading
+                    ) {
+
+                        clearInterval(
+                            monitor
+                        );
+
+                        /*
+                         * إعادة تحميل القوائم
+                         */
+
+                        await loadMovies();
+                        await loadSeries();
+
+                    }
+
+                    if (
+                        attempts >= 60
+                    ) {
+
+                        clearInterval(
+                            monitor
+                        );
+
+                    }
+
+                },
+                5000
+            );
+
+    } catch (error) {
+
+        showToast(
+            `⚠️ ${error.message}`
+        );
+
+    } finally {
+
+        setTimeout(
+            () => {
+
+                button.disabled =
+                    false;
+
+                button.textContent =
+                    oldText;
+
+            },
+            1500
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+function showMovies() {
+
+    document.getElementById(
+        'moviesWrapper'
+    ).classList.remove(
+        'hidden'
+    );
+
+    document.getElementById(
+        'seriesWrapper'
+    ).classList.add(
+        'hidden'
+    );
+
+    document.getElementById(
+        'searchResults'
+    ).classList.add(
+        'hidden'
+    );
+
+    document.getElementById(
+        'showMoviesBtn'
+    ).classList.add(
+        'active'
+    );
+
+    document.getElementById(
+        'showSeriesBtn'
+    ).classList.remove(
+        'active'
+    );
+
+}
+
+
+function showSeries() {
+
+    document.getElementById(
+        'moviesWrapper'
+    ).classList.add(
+        'hidden'
+    );
+
+    document.getElementById(
+        'seriesWrapper'
+    ).classList.remove(
+        'hidden'
+    );
+
+    document.getElementById(
+        'searchResults'
+    ).classList.add(
+        'hidden'
+    );
+
+    document.getElementById(
+        'showMoviesBtn'
+    ).classList.remove(
+        'active'
+    );
+
+    document.getElementById(
+        'showSeriesBtn'
+    ).classList.add(
+        'active'
+    );
+
+}
+
+
+/* =========================================================
+   EVENTS
+========================================================= */
+
+document
+    .getElementById('showMoviesBtn')
+    .addEventListener(
+        'click',
+        showMovies
+    );
+
+
+document
+    .getElementById('showSeriesBtn')
+    .addEventListener(
+        'click',
+        showSeries
+    );
+
+
+document
+    .getElementById('loadMoreMovies')
+    .addEventListener(
+        'click',
+        loadMoreMovies
+    );
+
+
+document
+    .getElementById('loadMoreSeries')
+    .addEventListener(
+        'click',
+        loadMoreSeries
+    );
+
+
+document
+    .getElementById('refreshBtn')
+    .addEventListener(
+        'click',
+        refreshData
+    );
+
+
+document
+    .getElementById('closePlayer')
+    .addEventListener(
+        'click',
+        closePlayer
+    );
+
+
+searchBtn.addEventListener(
+    'click',
+    () => {
+
+        performSearch(
+            searchInput.value
+        );
+
+    }
+);
+
+
+searchInput.addEventListener(
+    'keydown',
+    event => {
+
+        if (
+            event.key === 'Enter'
+        ) {
+
+            event.preventDefault();
+
+            performSearch(
+                searchInput.value
+            );
+
+        }
+
+    }
+);
+
+
+/*
+ * بحث تلقائي بعد توقف الكتابة
+ */
+
+searchInput.addEventListener(
+    'input',
+    () => {
+
+        clearTimeout(
+            searchTimer
+        );
+
+        const value =
+            searchInput.value.trim();
+
+        if (value.length < 2) {
+            return;
+        }
+
+        searchTimer =
+            setTimeout(
+                () => {
+
+                    performSearch(
+                        value
+                    );
+
+                },
+                600
+            );
+
+    }
+);
+
+
+/*
+ * ESC
+ */
+
+document.addEventListener(
+    'keydown',
+    event => {
+
+        if (
+            event.key === 'Escape' &&
+            playerModal.classList.contains(
+                'active'
+            )
+        ) {
+
+            closePlayer();
+
+        }
+
+    }
+);
+
+
+/*
+ * الضغط خارج النافذة
+ */
+
+playerModal.addEventListener(
+    'click',
+    event => {
+
+        if (
+            event.target ===
+            playerModal
+        ) {
+
+            closePlayer();
+
+        }
+
+    }
+);
+
+
+/*
+ * تنظيف الفيديو عند مغادرة الصفحة
+ */
+
+window.addEventListener(
+    'beforeunload',
+    () => {
+
+        stopVideo();
+
+    }
+);
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+async function initialize() {
+
+    setStatus(
+        'جاري الاتصال بالخادم...',
+        'loading'
+    );
+
+
+    /*
+     * الحالة أولاً
+     */
+
+    const status =
+        await loadStatus();
+
+
+    /*
+     * تحميل القوائم بالتوازي
+     */
+
+    await Promise.all([
+        loadMovies(),
+        loadSeries()
+    ]);
+
+
+    await loadStatus();
+
+
+    /*
+     * إذا كانت البيانات لا تزال
+     * قيد الجلب في الخلفية،
+     * نعيد التحقق دورياً.
+     */
+
+    if (
+        status &&
+        status.loading
+    ) {
+
+        const monitor =
+            setInterval(
+                async () => {
+
+                    const current =
+                        await loadStatus();
+
+                    if (
+                        current &&
+                        !current.loading
+                    ) {
+
+                        clearInterval(
+                            monitor
+                        );
+
+                        await loadMovies();
+                        await loadSeries();
+
+                    }
+
+                },
+                10000
+            );
+
+    }
+
+}
+
+
+/*
+ * بدء التطبيق
+ */
+
+initialize();
+
+</script>
+
 </body>
 </html>
+```
