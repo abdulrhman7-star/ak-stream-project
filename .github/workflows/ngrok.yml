@@ -1,0 +1,7 @@
+version: "2"
+authtoken: 3IQ8IzKiKHDrXl7mxEksppOvkBE_6BxHZQX5mwHXNs3uL4GtU
+tunnels:
+  flask:
+    proto: http
+    addr: 5001
+    traffic_policy_file: traffic-policy.yaml
