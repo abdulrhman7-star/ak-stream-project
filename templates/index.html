@@ -1,1081 +1,1384 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>أكوام برو – أفلام ومسلسلات</title>
 
-    <!-- دعم HLS للتشغيل -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="منصة أفلام ومسلسلات"
+    >
+
+    <title>AK Stream</title>
 
     <style>
-        /* =============== الأنماط الأساسية =============== */
-        * { margin:0; padding:0; box-sizing:border-box; }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #080b12;
+            --surface: #111621;
+            --surface-2: #171d2a;
+            --border: rgba(255,255,255,.08);
+            --text: #f5f7fb;
+            --muted: #9ba5b5;
+            --primary: #e50914;
+            --primary-hover: #ff1a25;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --radius: 14px;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            background: radial-gradient(circle at top, #17130b 0%, #08090b 70%);
-            color: #fff;
+            margin: 0;
             min-height: 100vh;
+            background:
+                radial-gradient(
+                    circle at top right,
+                    rgba(229,9,20,.12),
+                    transparent 35%
+                ),
+                var(--bg);
+            color: var(--text);
+            font-family:
+                Tahoma,
+                Arial,
+                sans-serif;
         }
-        a { color: inherit; }
-        button, input { font: inherit; }
-        .hidden { display: none !important; }
 
-        .container {
-            width: min(1500px, calc(100% - 30px));
-            margin: auto;
+        button,
+        input {
+            font: inherit;
         }
 
-        /* =============== الهيدر =============== */
+        button {
+            cursor: pointer;
+        }
+
+        /* =========================================
+           Header
+        ========================================= */
+
         header {
             position: sticky;
-            top: 12px;
+            top: 0;
             z-index: 100;
-            margin: 15px 0 25px;
-            padding: 14px 18px;
+            backdrop-filter: blur(18px);
+            background: rgba(8,11,18,.88);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: auto;
+            padding: 16px 20px;
             display: flex;
             align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            background: rgba(17,18,22,.92);
-            border: 1px solid #292d35;
-            border-radius: 18px;
-            backdrop-filter: blur(18px);
-            box-shadow: 0 15px 45px rgba(0,0,0,.35);
+            gap: 20px;
         }
+
         .logo {
-            font-size: 24px;
+            font-size: 25px;
             font-weight: 900;
-            color: #f5a623;
             white-space: nowrap;
         }
-        .logo span { color: #fff; }
+
+        .logo span {
+            color: var(--primary);
+        }
+
         .search-box {
             flex: 1;
-            display: flex;
-            gap: 8px;
-            min-width: 200px;
+            position: relative;
         }
+
         .search-box input {
-            flex: 1;
-            padding: 12px 18px;
-            background: #0d0f12;
-            border: 1px solid #30343c;
-            border-radius: 30px;
-            color: #fff;
+            width: 100%;
+            padding: 13px 45px 13px 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
             outline: none;
         }
+
         .search-box input:focus {
-            border-color: #f5a623;
-            box-shadow: 0 0 0 3px rgba(245,166,35,.08);
+            border-color: rgba(229,9,20,.65);
         }
-        .search-box button,
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+        }
+
         .refresh-btn {
-            border: 0;
-            border-radius: 30px;
-            padding: 11px 18px;
-            background: #f5a623;
-            color: #111;
-            font-weight: 800;
-            transition: .2s;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: white;
+            border-radius: 10px;
+            padding: 10px 14px;
         }
-        .search-box button:hover,
+
         .refresh-btn:hover {
-            background: #ffb83d;
-            transform: translateY(-1px);
-        }
-        .nav-tabs {
-            display: flex;
-            gap: 4px;
-            padding: 4px;
-            background: #0d0f12;
-            border: 1px solid #292d35;
-            border-radius: 30px;
-        }
-        .nav-tabs button {
-            border: 0;
-            border-radius: 25px;
-            padding: 9px 16px;
-            color: #9297a1;
-            background: transparent;
-            font-weight: 700;
-        }
-        .nav-tabs button.active {
-            color: #111;
-            background: #f5a623;
+            background: var(--surface-2);
         }
 
-        /* =============== شريط الحالة =============== */
+        /* =========================================
+           Status
+        ========================================= */
+
         .status-bar {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding: 12px 15px;
-            background: #101216;
-            border: 1px solid #292d35;
-            border-radius: 14px;
-        }
-        .status-left {
+            max-width: 1400px;
+            margin: auto;
+            padding: 12px 20px;
             display: flex;
             align-items: center;
-            gap: 15px;
-            color: #9297a1;
-            font-size: 14px;
+            gap: 18px;
+            color: var(--muted);
+            font-size: 13px;
         }
-        .status-dot {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: #9297a1;
-            display: inline-block;
-        }
-        .status-dot.online { background: #39d98a; box-shadow: 0 0 10px rgba(57,217,138,.6); }
-        .status-dot.loading { background: #f5a623; animation: pulse 1s infinite; }
-        @keyframes pulse { 50% { opacity: .3; } }
 
-        /* =============== شبكة البطاقات =============== */
-        .section-header {
-            display: flex;
+        .status {
+            display: inline-flex;
             align-items: center;
-            justify-content: space-between;
-            margin: 20px 0;
+            gap: 7px;
         }
-        .section-header h2 { font-size: 22px; }
-        .section-header h2 span { color: #f5a623; }
-        .count { color: #9297a1; font-size: 14px; }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--warning);
+        }
+
+        .dot.ready {
+            background: var(--success);
+        }
+
+        .dot.error {
+            background: var(--primary);
+        }
+
+        /* =========================================
+           Main
+        ========================================= */
+
+        main {
+            max-width: 1400px;
+            margin: auto;
+            padding: 10px 20px 60px;
+        }
+
+        .hero {
+            padding: 35px 0 25px;
+        }
+
+        .hero h1 {
+            margin: 0 0 10px;
+            font-size: clamp(28px, 5vw, 48px);
+        }
+
+        .hero p {
+            color: var(--muted);
+            margin: 0;
+        }
+
+        /* =========================================
+           Tabs
+        ========================================= */
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--muted);
+            padding: 10px 18px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* =========================================
+           Loading
+        ========================================= */
+
+        .loading {
+            display: none;
+            padding: 40px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,.1);
+            border-top-color: var(--primary);
+            animation: spin .8s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* =========================================
+           Grid
+        ========================================= */
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-            gap: 20px;
+            grid-template-columns:
+                repeat(
+                    auto-fill,
+                    minmax(170px, 1fr)
+                );
+            gap: 18px;
         }
+
         .card {
+            min-width: 0;
             overflow: hidden;
-            background: linear-gradient(180deg, #1b1e24, #15171c);
-            border: 1px solid #292d35;
-            border-radius: 15px;
-            transition: transform .25s, border-color .25s, box-shadow .25s;
-            cursor: pointer;
+            border-radius: var(--radius);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            transition:
+                transform .2s ease,
+                border-color .2s ease,
+                box-shadow .2s ease;
         }
+
         .card:hover {
-            transform: translateY(-7px);
-            border-color: #f5a623;
-            box-shadow: 0 15px 35px rgba(0,0,0,.4);
+            transform: translateY(-5px);
+            border-color: rgba(229,9,20,.45);
+            box-shadow:
+                0 15px 35px rgba(0,0,0,.25);
         }
-        .poster-wrapper {
+
+        .poster {
             position: relative;
             aspect-ratio: 2 / 3;
+            background: #0e131c;
             overflow: hidden;
-            background: #202329;
         }
-        .poster {
+
+        .poster img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
             display: block;
-            transition: transform .35s;
+            object-fit: cover;
+            transition: transform .3s ease;
         }
-        .card:hover .poster { transform: scale(1.04); }
-        .poster-overlay {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: flex-end;
-            padding: 10px;
-            background: linear-gradient(transparent 55%, rgba(0,0,0,.8));
+
+        .card:hover .poster img {
+            transform: scale(1.04);
         }
-        .quality {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 7px;
-            background: #f5a623;
-            color: #111;
-            font-size: 11px;
-            font-weight: 900;
-        }
+
         .type-badge {
             position: absolute;
             top: 10px;
             right: 10px;
-            padding: 5px 8px;
             background: rgba(0,0,0,.75);
-            border: 1px solid rgba(255,255,255,.15);
+            padding: 5px 9px;
             border-radius: 7px;
             font-size: 11px;
         }
-        .card-info {
-            padding: 12px;
-        }
-        .card-title {
-            font-size: 15px;
-            font-weight: 800;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .card-meta {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 8px;
-            color: #9297a1;
-            font-size: 12px;
-        }
-        .rating { color: #f5a623; }
 
-        /* =============== زر تحميل المزيد =============== */
-        .load-more-wrapper {
-            text-align: center;
-            padding: 30px 0 50px;
-        }
-        .load-more {
-            border: 0;
-            padding: 12px 30px;
-            border-radius: 30px;
-            background: #f5a623;
-            color: #111;
-            font-weight: 900;
-            transition: .2s;
-        }
-        .load-more:hover { background: #ffb83d; }
-        .load-more:disabled { opacity: .45; cursor: not-allowed; }
-
-        /* =============== حالة التحميل =============== */
-        .loading {
-            padding: 70px 20px;
-            text-align: center;
-            color: #9297a1;
-            font-size: 17px;
-        }
-        .spinner {
-            width: 35px;
-            height: 35px;
-            margin: 0 auto 15px;
-            border: 3px solid #333;
-            border-top-color: #f5a623;
-            border-radius: 50%;
-            animation: spin .8s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .error {
-            padding: 20px;
-            background: rgba(255,82,82,.08);
-            border: 1px solid rgba(255,82,82,.3);
-            border-radius: 12px;
-            color: #ff8c8c;
-            text-align: center;
-        }
-        .retry-btn {
-            margin-top: 12px;
-            padding: 8px 18px;
-            border: 0;
-            border-radius: 20px;
-            background: #ff5252;
-            color: #fff;
-            font-weight: bold;
-        }
-
-        /* =============== النافذة المنبثقة (مشغل الفيديو) =============== */
-        .modal {
-            position: fixed;
-            inset: 0;
-            z-index: 1000;
-            display: none;
-            padding: 20px;
-            background: rgba(0,0,0,.94);
-            overflow-y: auto;
-        }
-        .modal.active { display: block; }
-        .modal-content {
-            width: min(1150px, 100%);
-            margin: 20px auto;
-            overflow: hidden;
-            background: #101216;
-            border: 1px solid #292d35;
-            border-radius: 18px;
-            box-shadow: 0 25px 80px rgba(0,0,0,.6);
-        }
-        .modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 18px;
-            border-bottom: 1px solid #292d35;
-        }
-        .modal-title { font-size: 18px; font-weight: 900; }
-        .close-btn {
-            border: 0;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: #2a2d34;
-            color: #fff;
-            font-size: 20px;
-        }
-        .close-btn:hover { background: #ff5252; }
-
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            background: #000;
-        }
-        video {
-            display: block;
-            width: 100%;
-            max-height: 70vh;
-            background: #000;
-        }
-        .player-loading {
-            display: none;
+        .rating {
             position: absolute;
-            inset: 0;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,.5);
-            color: #fff;
-        }
-        .player-loading.active { display: flex; }
-
-        .links-section {
-            padding: 20px;
-        }
-        .links-title {
-            margin-bottom: 12px;
-            color: #f5a623;
-            font-size: 16px;
-        }
-        .links-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 25px;
-        }
-        .quality-btn, .download-btn {
-            border: 0;
-            padding: 9px 15px;
-            border-radius: 22px;
-            font-size: 13px;
-            font-weight: 800;
-            transition: .2s;
-        }
-        .quality-btn {
-            background: #f5a623;
-            color: #111;
-        }
-        .quality-btn:hover {
-            background: #ffb83d;
-            transform: translateY(-1px);
-        }
-        .quality-btn.active {
-            box-shadow: 0 0 0 2px #fff inset;
-        }
-        .download-btn {
-            background: #3688ff;
-            color: #fff;
-            text-decoration: none;
-        }
-        .download-btn:hover {
-            filter: brightness(1.15);
-            transform: translateY(-1px);
-        }
-
-        /* =============== الحلقات =============== */
-        .series-info { padding: 18px; border-bottom: 1px solid #292d35; }
-        .episodes-title {
-            margin-bottom: 15px;
-            color: #f5a623;
-            font-weight: 900;
-        }
-        .episodes {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        .episode-btn {
-            padding: 12px;
-            background: #1b1e24;
-            border: 1px solid #292d35;
-            border-radius: 10px;
-            color: #fff;
-            text-align: right;
-            transition: .2s;
-        }
-        .episode-btn:hover,
-        .episode-btn.active {
-            border-color: #f5a623;
-            background: rgba(245,166,35,.08);
-        }
-        .episode-number {
-            display: block;
-            color: #f5a623;
-            font-weight: 900;
-            margin-bottom: 4px;
-        }
-        .episode-name {
-            display: block;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            color: #9297a1;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,.8);
+            padding: 5px 8px;
+            border-radius: 7px;
             font-size: 12px;
         }
 
-        /* =============== تنبيه (Toast) =============== */
-        .toast {
-            position: fixed;
-            bottom: 25px;
-            right: 25px;
-            z-index: 3000;
-            max-width: 350px;
-            padding: 13px 18px;
-            background: #20242b;
-            border: 1px solid #292d35;
-            border-radius: 12px;
-            box-shadow: 0 15px 45px rgba(0,0,0,.35);
-            transform: translateY(120px);
-            opacity: 0;
-            transition: .3s;
-        }
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
+        .card-body {
+            padding: 12px;
         }
 
-        /* =============== توافق الجوال =============== */
-        @media (max-width: 900px) {
-            header { flex-direction: column; align-items: stretch; }
-            .logo { text-align: center; }
-            .search-box { width: 100%; }
-            .nav-tabs { width: 100%; justify-content: center; }
-            .grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 13px; }
+        .title {
+            font-size: 15px;
+            line-height: 1.5;
+            font-weight: 700;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 45px;
         }
-        @media (max-width: 500px) {
-            .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .card-info { padding: 9px; }
-            .card-title { font-size: 13px; }
-            .modal { padding: 5px; }
-            .modal-content { margin: 5px auto; border-radius: 12px; }
-            .episodes { grid-template-columns: 1fr 1fr; }
+
+        .meta {
+            display: flex;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 8px;
         }
+
+        .quality {
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #dce2eb;
+        }
+
+        /* =========================================
+           Pagination
+        ========================================= */
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 35px;
+        }
+
+        .page-btn {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: white;
+            padding: 10px 17px;
+            border-radius: 10px;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: var(--surface-2);
+        }
+
+        .page-btn:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+        .page-number {
+            color: var(--muted);
+        }
+
+        /* =========================================
+           Empty / Error
+        ========================================= */
+
+        .message {
+            display: none;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        /* =========================================
+           Responsive
+        ========================================= */
+
+        @media (max-width: 700px) {
+
+            .header-inner {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .logo {
+                width: 100%;
+            }
+
+            .search-box {
+                width: calc(100% - 55px);
+            }
+
+            .refresh-btn {
+                width: 45px;
+                padding: 10px;
+            }
+
+            .status-bar {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            .grid {
+                grid-template-columns:
+                    repeat(
+                        2,
+                        minmax(0, 1fr)
+                    );
+                gap: 12px;
+            }
+
+            .card-body {
+                padding: 9px;
+            }
+
+            .title {
+                font-size: 13px;
+            }
+        }
+
+        @media (min-width: 1000px) {
+
+            .grid {
+                grid-template-columns:
+                    repeat(
+                        6,
+                        minmax(0, 1fr)
+                    );
+            }
+        }
+
     </style>
+
 </head>
+
 <body>
 
-<div class="container">
+<header>
 
-    <!-- ======= الهيدر ======= -->
-    <header>
-        <div class="logo">🎬 <span>أكوام</span> برو</div>
+    <div class="header-inner">
+
+        <div class="logo">
+            AK <span>STREAM</span>
+        </div>
+
         <div class="search-box">
-            <input id="searchInput" type="search" autocomplete="off" placeholder="ابحث عن فيلم أو مسلسل..." />
-            <button id="searchBtn">🔍 بحث</button>
-        </div>
-        <div class="nav-tabs">
-            <button id="showMoviesBtn" class="active">🎬 أفلام</button>
-            <button id="showSeriesBtn">📺 مسلسلات</button>
-        </div>
-    </header>
 
-    <!-- ======= شريط الحالة ======= -->
-    <div class="status-bar">
-        <div class="status-left">
-            <span><span id="statusDot" class="status-dot"></span><span id="statusText">جاري الاتصال...</span></span>
-            <span>🎬 <b id="moviesCount">0</b></span>
-            <span>📺 <b id="seriesCount">0</b></span>
-            <span>📄 <b id="pagesCount">0</b></span>
+            <span class="search-icon">
+                🔎
+            </span>
+
+            <input
+                id="searchInput"
+                type="search"
+                placeholder="ابحث عن فيلم أو مسلسل..."
+                autocomplete="off"
+            >
+
         </div>
-        <button id="refreshBtn" class="refresh-btn">🔄 تحديث البيانات</button>
+
+        <button
+            class="refresh-btn"
+            id="refreshBtn"
+            title="تحديث البيانات"
+        >
+            ↻
+        </button>
+
     </div>
 
-    <!-- ======= قسم الأفلام ======= -->
-    <section id="moviesWrapper">
-        <div class="section-header">
-            <h2>🎬 <span>الأفلام</span></h2>
-            <span id="moviesTotal" class="count">0 فيلم</span>
-        </div>
-        <div id="moviesLoading" class="loading"><div class="spinner"></div>جاري تحميل الأفلام...</div>
-        <div id="moviesGrid" class="grid"></div>
-        <div class="load-more-wrapper">
-            <button id="loadMoreMovies" class="load-more">تحميل المزيد</button>
-        </div>
-    </section>
+</header>
 
-    <!-- ======= قسم المسلسلات ======= -->
-    <section id="seriesWrapper" class="hidden">
-        <div class="section-header">
-            <h2>📺 <span>المسلسلات</span></h2>
-            <span id="seriesTotal" class="count">0 مسلسل</span>
-        </div>
-        <div id="seriesLoading" class="loading"><div class="spinner"></div>جاري تحميل المسلسلات...</div>
-        <div id="seriesGrid" class="grid"></div>
-        <div class="load-more-wrapper">
-            <button id="loadMoreSeries" class="load-more">تحميل المزيد</button>
-        </div>
-    </section>
 
-    <!-- ======= نتائج البحث ======= -->
-    <section id="searchResults" class="hidden">
-        <div class="section-header search-heading">
-            <h2>🔎 نتائج البحث عن: <span id="searchQuery"></span></h2>
-            <span id="searchCount" class="count">0 نتيجة</span>
-        </div>
-        <div id="searchGrid" class="grid"></div>
-    </section>
+<div class="status-bar">
+
+    <div class="status">
+
+        <span
+            id="statusDot"
+            class="dot"
+        ></span>
+
+        <span id="statusText">
+            جاري الاتصال...
+        </span>
+
+    </div>
+
+    <div>
+        أفلام:
+        <strong id="moviesCount">0</strong>
+    </div>
+
+    <div>
+        مسلسلات:
+        <strong id="seriesCount">0</strong>
+    </div>
 
 </div>
 
-<!-- ======= نافذة المشغل ======= -->
-<div id="playerModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div id="playerTitle" class="modal-title">🎥 المشاهدة</div>
-            <button id="closePlayer" class="close-btn">×</button>
-        </div>
-        <div class="video-wrapper">
-            <video id="videoPlayer" controls playsinline preload="metadata"></video>
-            <div id="playerLoading" class="player-loading">⏳ جاري تشغيل الفيديو...</div>
-        </div>
-        <div class="links-section">
-            <h3 class="links-title">📺 جودة المشاهدة</h3>
-            <div id="qualityLinks" class="links-grid"><span class="count">جاري تحميل الروابط...</span></div>
-            <h3 class="links-title">⬇️ روابط التحميل</h3>
-            <div id="downloadLinks" class="links-grid"><span class="count">لا توجد روابط بعد</span></div>
-        </div>
-        <div id="seriesEpisodesSection" class="series-info hidden">
-            <div class="episodes-title">📺 الحلقات</div>
-            <div id="episodes" class="episodes"></div>
-        </div>
-    </div>
-</div>
 
-<!-- ======= تنبيه ======= -->
-<div id="toast" class="toast"></div>
+<main>
+
+    <section class="hero">
+
+        <h1 id="pageTitle">
+            الأفلام والمسلسلات
+        </h1>
+
+        <p id="pageDescription">
+            تصفح الكتالوج وابحث عن المحتوى الذي تريده.
+        </p>
+
+    </section>
+
+
+    <div class="tabs">
+
+        <button
+            class="tab active"
+            data-type="movies"
+        >
+            🎬 الأفلام
+        </button>
+
+        <button
+            class="tab"
+            data-type="series"
+        >
+            📺 المسلسلات
+        </button>
+
+    </div>
+
+
+    <div
+        id="loading"
+        class="loading"
+    >
+
+        <div class="spinner"></div>
+
+        <div id="loadingText">
+            جاري تحميل البيانات...
+        </div>
+
+    </div>
+
+
+    <div
+        id="grid"
+        class="grid"
+    ></div>
+
+
+    <div
+        id="message"
+        class="message"
+    ></div>
+
+
+    <div
+        id="pagination"
+        class="pagination"
+    >
+
+        <button
+            id="prevBtn"
+            class="page-btn"
+        >
+            السابق
+        </button>
+
+        <span
+            id="pageNumber"
+            class="page-number"
+        >
+            صفحة 1
+        </span>
+
+        <button
+            id="nextBtn"
+            class="page-btn"
+        >
+            التالي
+        </button>
+
+    </div>
+
+</main>
+
 
 <script>
-// =============================================================
-// 1. التكوين – غيّر API_BASE إلى رابط الخادم الخاص بك
-// =============================================================
-const API_BASE = 'https://penknife-reshuffle-subsonic.ngrok-free.dev'; // استبدله برابطك الفعلي
 
-const PAGE_SIZE = 24;
+    // ========================================================
+    // Configuration
+    // ========================================================
 
-// =============================================================
-// 2. الحالة العامة
-// =============================================================
-let allMovies = [];
-let allSeries = [];
-let moviesPage = 1;
-let seriesPage = 1;
-let currentVideoUrl = null;
-let hlsInstance = null;
+    const API_BASE = "";
 
-// =============================================================
-// 3. عناصر DOM
-// =============================================================
-const moviesGrid = document.getElementById('moviesGrid');
-const seriesGrid = document.getElementById('seriesGrid');
-const searchGrid = document.getElementById('searchGrid');
-const searchInput = document.getElementById('searchInput');
-const searchBtn = document.getElementById('searchBtn');
-const playerModal = document.getElementById('playerModal');
-const videoPlayer = document.getElementById('videoPlayer');
-const playerTitle = document.getElementById('playerTitle');
-const playerLoading = document.getElementById('playerLoading');
-const qualityLinks = document.getElementById('qualityLinks');
-const downloadLinks = document.getElementById('downloadLinks');
-const episodes = document.getElementById('episodes');
-const seriesEpisodesSection = document.getElementById('seriesEpisodesSection');
-const toast = document.getElementById('toast');
+    const PAGE_SIZE = 24;
 
-// =============================================================
-// 4. دوال مساعدة
-// =============================================================
-function escapeHTML(str) {
-    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-}
-function safeURL(url) {
-    if (!url) return '';
-    try { const u = new URL(url, API_BASE); if (u.protocol !== 'http:' && u.protocol !== 'https:') return ''; return u.href; }
-    catch { return ''; }
-}
-function imageURL(url) {
-    return safeURL(url) || 'https://placehold.co/400x600/191b20/888?text=No+Image';
-}
-function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => toast.classList.remove('show'), 3000);
-}
-function setStatus(text, state = '') {
-    const dot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    statusText.textContent = text;
-    dot.className = 'status-dot ' + state;
-}
-async function fetchJSON(endpoint, options = {}) {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers: { Accept: 'application/json', ...(options.headers || {}) }
-    });
-    let data;
-    try { data = await res.json(); }
-    catch { throw new Error(`استجابة غير صالحة (${res.status})`); }
-    if (!res.ok) throw new Error(data.error || data.message || `خطأ HTTP ${res.status}`);
-    return data;
-}
+    let currentType = "movies";
 
-// =============================================================
-// 5. جلب حالة الخادم
-// =============================================================
-async function loadStatus() {
-    try {
-        const data = await fetchJSON('/api/status');
-        if (!data.success) throw new Error('تعذر الحصول على الحالة');
-        document.getElementById('moviesCount').textContent = Number(data.movies || 0).toLocaleString('ar');
-        document.getElementById('seriesCount').textContent = Number(data.series || 0).toLocaleString('ar');
-        document.getElementById('pagesCount').textContent = Number(data.pages || 0).toLocaleString('ar');
-        if (data.loading) {
-            setStatus('الخادم يجلب البيانات...', 'loading');
-        } else if (data.ready) {
-            setStatus('الخادم جاهز', 'online');
-        } else {
-            setStatus('في انتظار البيانات', '');
+    let currentPage = 0;
+
+    let totalPages = 0;
+
+    let searchTimer = null;
+
+    let searchMode = false;
+
+
+    // ========================================================
+    // Elements
+    // ========================================================
+
+    const grid =
+        document.getElementById("grid");
+
+    const loading =
+        document.getElementById("loading");
+
+    const loadingText =
+        document.getElementById("loadingText");
+
+    const message =
+        document.getElementById("message");
+
+    const prevBtn =
+        document.getElementById("prevBtn");
+
+    const nextBtn =
+        document.getElementById("nextBtn");
+
+    const pageNumber =
+        document.getElementById("pageNumber");
+
+    const searchInput =
+        document.getElementById("searchInput");
+
+    const refreshBtn =
+        document.getElementById("refreshBtn");
+
+    const statusText =
+        document.getElementById("statusText");
+
+    const statusDot =
+        document.getElementById("statusDot");
+
+    const moviesCount =
+        document.getElementById("moviesCount");
+
+    const seriesCount =
+        document.getElementById("seriesCount");
+
+    const pageTitle =
+        document.getElementById("pageTitle");
+
+    const pageDescription =
+        document.getElementById("pageDescription");
+
+
+    // ========================================================
+    // Helpers
+    // ========================================================
+
+    function escapeHtml(value) {
+
+        if (value === null ||
+            value === undefined) {
+            return "";
         }
-        return data;
-    } catch (e) {
-        setStatus('تعذر الاتصال بالخادم', '');
-        console.error(e);
-        return null;
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
-}
 
-// =============================================================
-// 6. إنشاء بطاقة فيلم/مسلسل
-// =============================================================
-function createCard(item) {
-    const card = document.createElement('article');
-    card.className = 'card';
-    const type = item.type === 'series' ? 'مسلسل' : 'فيلم';
-    const quality = item.quality || '';
-    card.innerHTML = `
-        <div class="poster-wrapper">
-            <img class="poster" src="${escapeHTML(imageURL(item.image))}" alt="${escapeHTML(item.title || 'بدون عنوان')}" loading="lazy">
-            <div class="poster-overlay">${quality ? `<span class="quality">${escapeHTML(quality)}</span>` : ''}</div>
-            <span class="type-badge">${type}</span>
-        </div>
-        <div class="card-info">
-            <div class="card-title" title="${escapeHTML(item.title || '')}">${escapeHTML(item.title || 'غير معروف')}</div>
-            <div class="card-meta"><span>${escapeHTML(item.year || '----')}</span><span class="rating">⭐ ${escapeHTML(item.rating || '0.0')}</span></div>
-        </div>
-    `;
-    card.querySelector('img').addEventListener('error', function() {
-        this.src = 'https://placehold.co/400x600/191b20/888?text=No+Image';
-    }, { once: true });
-    card.addEventListener('click', () => {
-        if (item.type === 'series') openSeries(item);
-        else openMovie(item);
-    });
-    return card;
-}
 
-// =============================================================
-// 7. عرض البطاقات في شبكة
-// =============================================================
-function renderCards(items, container, append = false) {
-    if (!append) container.innerHTML = '';
-    if (!items || !items.length) {
-        if (!append) container.innerHTML = `<div class="error">لا توجد عناصر لعرضها.</div>`;
-        return;
+    function setLoading(show, text = "جاري التحميل...") {
+
+        loadingText.textContent = text;
+
+        loading.classList.toggle(
+            "show",
+            show
+        );
     }
-    const frag = document.createDocumentFragment();
-    items.forEach(item => frag.appendChild(createCard(item)));
-    container.appendChild(frag);
-}
 
-// =============================================================
-// 8. تحميل الأفلام (يستخدم /api/all-movies)
-// =============================================================
-async function loadMovies() {
-    const loading = document.getElementById('moviesLoading');
-    loading.classList.remove('hidden');
-    try {
-        const data = await fetchJSON('/api/all-movies');
-        if (!data.success) throw new Error(data.error || 'فشل تحميل الأفلام');
-        allMovies = Array.isArray(data.data) ? data.data : [];
-        moviesPage = 1;
-        renderCards(allMovies.slice(0, PAGE_SIZE), moviesGrid);
-        document.getElementById('moviesTotal').textContent = `${allMovies.length.toLocaleString('ar')} فيلم`;
-        updateLoadMoreButton('movies');
-    } catch (e) {
-        moviesGrid.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}<br><button class="retry-btn" onclick="loadMovies()">إعادة المحاولة</button></div>`;
-    } finally {
-        loading.classList.add('hidden');
+
+    function showMessage(text) {
+
+        message.textContent = text;
+
+        message.classList.add(
+            "show"
+        );
     }
-}
 
-// =============================================================
-// 9. تحميل المسلسلات (يستخدم /api/all-series)
-// =============================================================
-async function loadSeries() {
-    const loading = document.getElementById('seriesLoading');
-    loading.classList.remove('hidden');
-    try {
-        const data = await fetchJSON('/api/all-series');
-        if (!data.success) throw new Error(data.error || 'فشل تحميل المسلسلات');
-        allSeries = Array.isArray(data.data) ? data.data : [];
-        allSeries.forEach(item => item.type = 'series');
-        seriesPage = 1;
-        renderCards(allSeries.slice(0, PAGE_SIZE), seriesGrid);
-        document.getElementById('seriesTotal').textContent = `${allSeries.length.toLocaleString('ar')} مسلسل`;
-        updateLoadMoreButton('series');
-    } catch (e) {
-        seriesGrid.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}<br><button class="retry-btn" onclick="loadSeries()">إعادة المحاولة</button></div>`;
-    } finally {
-        loading.classList.add('hidden');
+
+    function hideMessage() {
+
+        message.classList.remove(
+            "show"
+        );
+
+        message.textContent = "";
     }
-}
 
-// =============================================================
-// 10. تحميل المزيد (Pagination)
-// =============================================================
-function updateLoadMoreButton(type) {
-    const button = type === 'movies' ? document.getElementById('loadMoreMovies') : document.getElementById('loadMoreSeries');
-    const collection = type === 'movies' ? allMovies : allSeries;
-    const page = type === 'movies' ? moviesPage : seriesPage;
-    const displayed = page * PAGE_SIZE;
-    if (displayed >= collection.length) {
-        button.disabled = true;
-        button.textContent = collection.length ? '✓ تم تحميل الكل' : 'لا توجد عناصر';
-    } else {
-        button.disabled = false;
-        button.textContent = `تحميل المزيد (${Math.min(PAGE_SIZE, collection.length - displayed)})`;
+
+    // ========================================================
+    // Status
+    // ========================================================
+
+    async function loadStatus() {
+
+        try {
+
+            const response =
+                await fetch(
+                    `${API_BASE}/api/status`,
+                    {
+                        cache: "no-store"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error("Status failed");
+            }
+
+            const status =
+                await response.json();
+
+            moviesCount.textContent =
+                status.movies || 0;
+
+            seriesCount.textContent =
+                status.series || 0;
+
+            if (status.loading) {
+
+                statusText.textContent =
+                    "جاري جلب البيانات...";
+
+                statusDot.className =
+                    "dot";
+
+            } else if (status.ready) {
+
+                statusText.textContent =
+                    "الخادم جاهز";
+
+                statusDot.className =
+                    "dot ready";
+
+            } else {
+
+                statusText.textContent =
+                    "في انتظار البيانات";
+
+                statusDot.className =
+                    "dot";
+            }
+
+        } catch (error) {
+
+            statusText.textContent =
+                "تعذر الاتصال بالخادم";
+
+            statusDot.className =
+                "dot error";
+        }
     }
-}
-function loadMoreMovies() {
-    const start = moviesPage * PAGE_SIZE;
-    renderCards(allMovies.slice(start, start + PAGE_SIZE), moviesGrid, true);
-    moviesPage++;
-    updateLoadMoreButton('movies');
-}
-function loadMoreSeries() {
-    const start = seriesPage * PAGE_SIZE;
-    renderCards(allSeries.slice(start, start + PAGE_SIZE), seriesGrid, true);
-    seriesPage++;
-    updateLoadMoreButton('series');
-}
 
-// =============================================================
-// 11. البحث
-// =============================================================
-let searchTimer = null;
-async function performSearch(query) {
-    query = query.trim();
-    if (!query) { showHome(); return; }
-    document.getElementById('moviesWrapper').classList.add('hidden');
-    document.getElementById('seriesWrapper').classList.add('hidden');
-    document.getElementById('searchResults').classList.remove('hidden');
-    document.getElementById('searchQuery').textContent = query;
-    searchGrid.innerHTML = `<div class="loading"><div class="spinner"></div>جاري البحث...</div>`;
-    try {
-        const data = await fetchJSON(`/api/search?q=${encodeURIComponent(query)}`);
-        const results = Array.isArray(data.data) ? data.data : [];
-        results.forEach(item => {
-            if (!item.type) item.type = (item.link && item.link.includes('/series/')) ? 'series' : 'movie';
+
+    // ========================================================
+    // Load Catalog
+    // ========================================================
+
+    async function loadCatalog() {
+
+        searchMode = false;
+
+        hideMessage();
+
+        setLoading(
+            true,
+            "جاري تحميل العناصر..."
+        );
+
+        grid.innerHTML = "";
+
+        try {
+
+            const endpoint =
+                currentType === "movies"
+                    ? "/api/movies"
+                    : "/api/series";
+
+            const url =
+                `${API_BASE}${endpoint}` +
+                `?page=${currentPage}` +
+                `&limit=${PAGE_SIZE}`;
+
+            const response =
+                await fetch(url, {
+                    cache: "no-store"
+                });
+
+            if (response.status === 503) {
+
+                showMessage(
+                    "البيانات لا تزال تُحمّل في الخلفية. سيتم تحديث الصفحة تلقائيًا."
+                );
+
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(
+                    `HTTP ${response.status}`
+                );
+            }
+
+            const result =
+                await response.json();
+
+            if (!result.success) {
+
+                showMessage(
+                    result.error ||
+                    "حدث خطأ أثناء تحميل البيانات"
+                );
+
+                return;
+            }
+
+            renderItems(
+                result.data || []
+            );
+
+            totalPages =
+                result.totalPages || 0;
+
+            updatePagination();
+
+            if (
+                !result.data ||
+                result.data.length === 0
+            ) {
+
+                showMessage(
+                    "لا توجد عناصر في هذه الصفحة."
+                );
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            showMessage(
+                "تعذر الاتصال بالخادم."
+            );
+
+        } finally {
+
+            setLoading(false);
+        }
+    }
+
+
+    // ========================================================
+    // Search
+    // ========================================================
+
+    async function searchCatalog(query) {
+
+        const q =
+            query.trim();
+
+        if (!q) {
+
+            currentPage = 0;
+
+            await loadCatalog();
+
+            return;
+        }
+
+        searchMode = true;
+
+        hideMessage();
+
+        setLoading(
+            true,
+            `جاري البحث عن "${q}"...`
+        );
+
+        grid.innerHTML = "";
+
+        try {
+
+            const url =
+                `${API_BASE}/api/search` +
+                `?q=${encodeURIComponent(q)}` +
+                `&limit=100`;
+
+            const response =
+                await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(
+                    "Search failed"
+                );
+            }
+
+            const result =
+                await response.json();
+
+            renderItems(
+                result.data || []
+            );
+
+            document.getElementById(
+                "pageTitle"
+            ).textContent =
+                `نتائج البحث: ${q}`;
+
+            document.getElementById(
+                "pageDescription"
+            ).textContent =
+                `تم العثور على ${result.total || 0} نتيجة`;
+
+            document.getElementById(
+                "pagination"
+            ).style.display = "none";
+
+            if (
+                !result.data ||
+                result.data.length === 0
+            ) {
+
+                showMessage(
+                    "لم يتم العثور على نتائج."
+                );
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            showMessage(
+                "حدث خطأ أثناء البحث."
+            );
+
+        } finally {
+
+            setLoading(false);
+        }
+    }
+
+
+    // ========================================================
+    // Render cards
+    // ========================================================
+
+    function renderItems(items) {
+
+        grid.innerHTML = "";
+
+        items.forEach(item => {
+
+            const card =
+                document.createElement("article");
+
+            card.className = "card";
+
+            const title =
+                escapeHtml(
+                    item.title || "بدون عنوان"
+                );
+
+            const image =
+                escapeHtml(
+                    item.image || ""
+                );
+
+            const year =
+                escapeHtml(
+                    item.year || "----"
+                );
+
+            const rating =
+                escapeHtml(
+                    item.rating || "0.0"
+                );
+
+            const quality =
+                escapeHtml(
+                    item.quality || ""
+                );
+
+            const type =
+                item.type === "series"
+                    ? "مسلسل"
+                    : "فيلم";
+
+            card.innerHTML = `
+
+                <div class="poster">
+
+                    ${
+                        image
+                        ?
+                        `
+                        <img
+                            src="${image}"
+                            alt="${title}"
+                            loading="lazy"
+                            onerror="this.style.display='none'"
+                        >
+                        `
+                        :
+                        `
+                        <div style="
+                            width:100%;
+                            height:100%;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            color:#777;
+                            font-size:40px;
+                        ">
+                            🎬
+                        </div>
+                        `
+                    }
+
+                    <div class="type-badge">
+                        ${type}
+                    </div>
+
+                    <div class="rating">
+                        ⭐ ${rating}
+                    </div>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="title">
+                        ${title}
+                    </div>
+
+                    <div class="meta">
+                        <span>
+                            ${year}
+                        </span>
+                    </div>
+
+                    ${
+                        quality
+                        ?
+                        `
+                        <div class="quality">
+                            ${quality}
+                        </div>
+                        `
+                        :
+                        ""
+                    }
+
+                </div>
+            `;
+
+            grid.appendChild(card);
         });
-        document.getElementById('searchCount').textContent = `${results.length.toLocaleString('ar')} نتيجة`;
-        renderCards(results, searchGrid);
-    } catch (e) {
-        searchGrid.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}</div>`;
     }
-}
-function showHome() {
-    document.getElementById('searchResults').classList.add('hidden');
-    document.getElementById('moviesWrapper').classList.remove('hidden');
-    document.getElementById('seriesWrapper').classList.add('hidden');
-    document.getElementById('showMoviesBtn').classList.add('active');
-    document.getElementById('showSeriesBtn').classList.remove('active');
-}
 
-// =============================================================
-// 12. تشغيل الفيلم
-// =============================================================
-async function openMovie(movie) {
-    if (!movie.link) { showToast('⚠️ لا يوجد رابط لهذا الفيلم'); return; }
-    playerModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    playerTitle.textContent = `🎥 ${movie.title || 'المشاهدة'}`;
-    qualityLinks.innerHTML = `<span class="count">⏳ جاري تحميل الجودات...</span>`;
-    downloadLinks.innerHTML = `<span class="count">جاري تحميل الروابط...</span>`;
-    seriesEpisodesSection.classList.add('hidden');
-    stopVideo();
-    try {
-        const data = await fetchJSON(`/api/movie-links?url=${encodeURIComponent(movie.link)}`);
-        const links = Array.isArray(data.links) ? data.links : (Array.isArray(data.data) ? data.data : []);
-        if (!links.length) {
-            qualityLinks.innerHTML = `<span class="count">لا توجد روابط مشاهدة متاحة.</span>`;
-            downloadLinks.innerHTML = `<span class="count">لا توجد روابط تحميل متاحة.</span>`;
+
+    // ========================================================
+    // Pagination
+    // ========================================================
+
+    function updatePagination() {
+
+        if (searchMode) {
             return;
         }
-        renderVideoLinks(links);
-        const first = links.find(item => item.watch);
-        if (first) setTimeout(() => playVideo(first.watch, first.quality), 100);
-    } catch (e) {
-        qualityLinks.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}</div>`;
-        downloadLinks.innerHTML = '';
-    }
-}
 
-// =============================================================
-// 13. عرض روابط المشاهدة والتحميل
-// =============================================================
-function renderVideoLinks(links) {
-    qualityLinks.innerHTML = '';
-    downloadLinks.innerHTML = '';
-    links.forEach((link, index) => {
-        const quality = link.quality || `جودة ${index+1}`;
-        if (link.watch) {
-            const btn = document.createElement('button');
-            btn.className = 'quality-btn';
-            btn.textContent = `▶ ${quality}`;
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                playVideo(link.watch, quality);
-            });
-            qualityLinks.appendChild(btn);
-        }
-        if (link.download) {
-            const url = safeURL(link.download);
-            if (url) {
-                const a = document.createElement('a');
-                a.className = 'download-btn';
-                a.href = url;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                a.textContent = `⬇ ${quality}`;
-                downloadLinks.appendChild(a);
+        document.getElementById(
+            "pagination"
+        ).style.display = "flex";
+
+        pageNumber.textContent =
+            `صفحة ${currentPage + 1}` +
+            (
+                totalPages
+                    ? ` من ${totalPages}`
+                    : ""
+            );
+
+        prevBtn.disabled =
+            currentPage <= 0;
+
+        nextBtn.disabled =
+            totalPages > 0
+                ? currentPage >= totalPages - 1
+                : true;
+    }
+
+
+    prevBtn.addEventListener(
+        "click",
+        async () => {
+
+            if (currentPage <= 0) {
+                return;
             }
-        }
-    });
-    if (!qualityLinks.children.length) qualityLinks.innerHTML = `<span class="count">لا توجد روابط مشاهدة.</span>`;
-    if (!downloadLinks.children.length) downloadLinks.innerHTML = `<span class="count">لا توجد روابط تحميل.</span>`;
-}
 
-// =============================================================
-// 14. تشغيل الفيديو (يدعم HLS و MP4)
-// =============================================================
-async function playVideo(url, quality = '') {
-    const videoURL = safeURL(url);
-    if (!videoURL) { showToast('⚠️ رابط الفيديو غير صالح'); return; }
-    currentVideoUrl = videoURL;
-    playerLoading.classList.add('active');
-    stopVideo(false);
-    try {
-        const isHLS = /\.m3u8($|\?)/i.test(videoURL);
-        if (isHLS && window.Hls && Hls.isSupported()) {
-            hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: false });
-            hlsInstance.loadSource(videoURL);
-            hlsInstance.attachMedia(videoPlayer);
-            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-                playerLoading.classList.remove('active');
-                videoPlayer.play().catch(() => {});
+            currentPage--;
+
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
             });
-            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-                console.error('HLS error:', data);
-                if (data.fatal) { playerLoading.classList.remove('active'); showToast('⚠️ تعذر تشغيل بث HLS'); }
+
+            await loadCatalog();
+        }
+    );
+
+
+    nextBtn.addEventListener(
+        "click",
+        async () => {
+
+            if (
+                totalPages &&
+                currentPage >= totalPages - 1
+            ) {
+                return;
+            }
+
+            currentPage++;
+
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
             });
-            return;
+
+            await loadCatalog();
         }
-        if (isHLS && videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-            videoPlayer.src = videoURL;
-            videoPlayer.load();
-            playerLoading.classList.remove('active');
-            await videoPlayer.play().catch(() => {});
-            return;
-        }
-        // MP4 أو غيره
-        videoPlayer.src = videoURL;
-        videoPlayer.load();
-        playerLoading.classList.remove('active');
-        await videoPlayer.play().catch(() => {});
-    } catch (e) {
-        console.error(e);
-        playerLoading.classList.remove('active');
-        showToast('⚠️ تعذر تشغيل الفيديو');
-    }
-}
+    );
 
-// =============================================================
-// 15. إيقاف الفيديو
-// =============================================================
-function stopVideo(clearSource = true) {
-    if (hlsInstance) { try { hlsInstance.destroy(); } catch {} hlsInstance = null; }
-    try { videoPlayer.pause(); } catch {}
-    if (clearSource) { videoPlayer.removeAttribute('src'); videoPlayer.load(); }
-    playerLoading.classList.remove('active');
-    currentVideoUrl = null;
-}
 
-// =============================================================
-// 16. فتح المسلسل وعرض الحلقات
-// =============================================================
-async function openSeries(series) {
-    if (!series.link) { showToast('⚠️ لا يوجد رابط للمسلسل'); return; }
-    playerModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    playerTitle.textContent = `📺 ${series.title || 'المسلسل'}`;
-    qualityLinks.innerHTML = `<span class="count">اختر حلقة للبدء...</span>`;
-    downloadLinks.innerHTML = '';
-    seriesEpisodesSection.classList.remove('hidden');
-    episodes.innerHTML = `<div class="loading"><div class="spinner"></div>جاري تحميل الحلقات...</div>`;
-    stopVideo();
-    try {
-        const data = await fetchJSON(`/api/series-episodes?url=${encodeURIComponent(series.link)}`);
-        const list = Array.isArray(data.episodes) ? data.episodes : (Array.isArray(data.data) ? data.data : []);
-        renderEpisodes(list);
-    } catch (e) {
-        episodes.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}</div>`;
-    }
-}
+    // ========================================================
+    // Tabs
+    // ========================================================
 
-function renderEpisodes(list) {
-    episodes.innerHTML = '';
-    if (!list.length) { episodes.innerHTML = `<div class="error">لا توجد حلقات متاحة.</div>`; return; }
-    const frag = document.createDocumentFragment();
-    list.forEach((ep, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'episode-btn';
-        btn.innerHTML = `<span class="episode-number">الحلقة ${escapeHTML(ep.number || String(idx+1))}</span><span class="episode-name">${escapeHTML(ep.title || `الحلقة ${idx+1}`)}</span>`;
-        btn.addEventListener('click', async () => {
-            document.querySelectorAll('.episode-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            await openEpisode(ep);
+    document
+        .querySelectorAll(".tab")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async () => {
+
+                    document
+                        .querySelectorAll(".tab")
+                        .forEach(tab => {
+                            tab.classList.remove(
+                                "active"
+                            );
+                        });
+
+                    button.classList.add(
+                        "active"
+                    );
+
+                    currentType =
+                        button.dataset.type;
+
+                    currentPage = 0;
+
+                    pageTitle.textContent =
+                        currentType === "movies"
+                            ? "الأفلام"
+                            : "المسلسلات";
+
+                    pageDescription.textContent =
+                        currentType === "movies"
+                            ? "تصفح جميع الأفلام المتاحة."
+                            : "تصفح جميع المسلسلات المتاحة.";
+
+                    searchInput.value = "";
+
+                    await loadCatalog();
+                }
+            );
         });
-        frag.appendChild(btn);
-    });
-    episodes.appendChild(frag);
-}
 
-async function openEpisode(episode) {
-    if (!episode.url) { showToast('⚠️ رابط الحلقة غير متوفر'); return; }
-    qualityLinks.innerHTML = `<span class="count">⏳ جاري جلب رابط الحلقة...</span>`;
-    downloadLinks.innerHTML = '';
-    try {
-        const data = await fetchJSON(`/api/movie-links?url=${encodeURIComponent(episode.url)}`);
-        const links = Array.isArray(data.links) ? data.links : (Array.isArray(data.data) ? data.data : []);
-        if (!links.length) { qualityLinks.innerHTML = `<span class="count">لا توجد روابط تشغيل للحلقة.</span>`; return; }
-        renderVideoLinks(links);
-        const first = links.find(item => item.watch);
-        if (first) playVideo(first.watch, first.quality);
-    } catch (e) {
-        qualityLinks.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}</div>`;
-    }
-}
 
-// =============================================================
-// 17. إغلاق المشغل
-// =============================================================
-function closePlayer() {
-    playerModal.classList.remove('active');
-    document.body.style.overflow = '';
-    stopVideo();
-    qualityLinks.innerHTML = '';
-    downloadLinks.innerHTML = '';
-    episodes.innerHTML = '';
-    seriesEpisodesSection.classList.add('hidden');
-}
+    // ========================================================
+    // Search Input
+    // ========================================================
 
-// =============================================================
-// 18. تحديث البيانات (Refresh)
-// =============================================================
-async function refreshData() {
-    const btn = document.getElementById('refreshBtn');
-    const oldText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = '⏳ جاري التحديث...';
-    try {
-        const data = await fetchJSON('/api/refresh', { method: 'POST' });
-        showToast(data.message || 'بدأ تحديث البيانات');
-        setStatus('جاري تحديث البيانات...', 'loading');
-        let attempts = 0;
-        const monitor = setInterval(async () => {
-            attempts++;
-            const status = await loadStatus();
-            if (status && !status.loading) {
-                clearInterval(monitor);
-                await loadMovies();
-                await loadSeries();
+    searchInput.addEventListener(
+        "input",
+        () => {
+
+            clearTimeout(searchTimer);
+
+            const value =
+                searchInput.value.trim();
+
+            searchTimer =
+                setTimeout(
+                    () => {
+
+                        if (value) {
+
+                            searchCatalog(
+                                value
+                            );
+
+                        } else {
+
+                            currentPage = 0;
+
+                            pageTitle.textContent =
+                                currentType === "movies"
+                                    ? "الأفلام"
+                                    : "المسلسلات";
+
+                            pageDescription.textContent =
+                                "تصفح الكتالوج وابحث عن المحتوى الذي تريده.";
+
+                            loadCatalog();
+                        }
+
+                    },
+                    400
+                );
+        }
+    );
+
+
+    // ========================================================
+    // Refresh
+    // ========================================================
+
+    refreshBtn.addEventListener(
+        "click",
+        async () => {
+
+            refreshBtn.disabled = true;
+
+            refreshBtn.textContent =
+                "⟳";
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${API_BASE}/api/refresh`,
+                        {
+                            method: "POST"
+                        }
+                    );
+
+                const result =
+                    await response.json();
+
+                if (result.success) {
+
+                    statusText.textContent =
+                        "بدأ تحديث البيانات...";
+
+                    statusDot.className =
+                        "dot";
+
+                } else {
+
+                    alert(
+                        result.message ||
+                        "تعذر بدء التحديث"
+                    );
+                }
+
+            } catch (error) {
+
+                alert(
+                    "تعذر الاتصال بالخادم"
+                );
+
+            } finally {
+
+                setTimeout(
+                    () => {
+
+                        refreshBtn.disabled =
+                            false;
+
+                        refreshBtn.textContent =
+                            "↻";
+
+                        loadStatus();
+
+                    },
+                    1000
+                );
             }
-            if (attempts >= 60) clearInterval(monitor);
-        }, 5000);
-    } catch (e) {
-        showToast(`⚠️ ${e.message}`);
-    } finally {
-        setTimeout(() => { btn.disabled = false; btn.textContent = oldText; }, 1500);
+        }
+    );
+
+
+    // ========================================================
+    // Auto status polling
+    // ========================================================
+
+    setInterval(
+        loadStatus,
+        10000
+    );
+
+
+    // ========================================================
+    // Initial
+    // ========================================================
+
+    async function init() {
+
+        await loadStatus();
+
+        await loadCatalog();
+
     }
-}
 
-// =============================================================
-// 19. التنقل بين الأقسام
-// =============================================================
-function showMovies() {
-    document.getElementById('moviesWrapper').classList.remove('hidden');
-    document.getElementById('seriesWrapper').classList.add('hidden');
-    document.getElementById('searchResults').classList.add('hidden');
-    document.getElementById('showMoviesBtn').classList.add('active');
-    document.getElementById('showSeriesBtn').classList.remove('active');
-}
-function showSeries() {
-    document.getElementById('moviesWrapper').classList.add('hidden');
-    document.getElementById('seriesWrapper').classList.remove('hidden');
-    document.getElementById('searchResults').classList.add('hidden');
-    document.getElementById('showMoviesBtn').classList.remove('active');
-    document.getElementById('showSeriesBtn').classList.add('active');
-}
+    init();
 
-// =============================================================
-// 20. ربط الأحداث
-// =============================================================
-document.getElementById('showMoviesBtn').addEventListener('click', showMovies);
-document.getElementById('showSeriesBtn').addEventListener('click', showSeries);
-document.getElementById('loadMoreMovies').addEventListener('click', loadMoreMovies);
-document.getElementById('loadMoreSeries').addEventListener('click', loadMoreSeries);
-document.getElementById('refreshBtn').addEventListener('click', refreshData);
-document.getElementById('closePlayer').addEventListener('click', closePlayer);
-searchBtn.addEventListener('click', () => performSearch(searchInput.value));
-searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); performSearch(searchInput.value); } });
-searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    const val = searchInput.value.trim();
-    if (val.length < 2) return;
-    searchTimer = setTimeout(() => performSearch(val), 600);
-});
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && playerModal.classList.contains('active')) closePlayer(); });
-playerModal.addEventListener('click', e => { if (e.target === playerModal) closePlayer(); });
-window.addEventListener('beforeunload', () => stopVideo());
-
-// =============================================================
-// 21. تهيئة الصفحة
-// =============================================================
-(async function init() {
-    setStatus('جاري الاتصال بالخادم...', 'loading');
-    const status = await loadStatus();
-    await Promise.all([loadMovies(), loadSeries()]);
-    await loadStatus();
-    if (status && status.loading) {
-        const monitor = setInterval(async () => {
-            const current = await loadStatus();
-            if (current && !current.loading) {
-                clearInterval(monitor);
-                await loadMovies();
-                await loadSeries();
-            }
-        }, 10000);
-    }
-})();
 </script>
+
 </body>
+
 </html>
