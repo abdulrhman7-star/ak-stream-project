@@ -1,5 +1,5 @@
 # ============================================
-# app.py – خادم Flask مع جلب تدريجي في الخلفية
+# app.py – خادم Flask مع دعم كامل للواجهة الأمامية
 # ============================================
 from flask import Flask, render_template, request, jsonify, Response
 from flask_cors import CORS
@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 app = Flask(__name__)
-CORS(app)  # لتسهيل الاختبار من متصفحات مختلفة
+CORS(app)  # تمكين CORS للاختبار
 
 # ------------------- الإعدادات -------------------
 HEADERS = {
@@ -22,7 +22,7 @@ HEADERS = {
 
 pages_db = {}
 _is_loading = False
-_background_started = False  # علم لمنع التشغيل المتكرر
+_background_started = False
 
 # ------------------- دوال الاستخراج (نفسها سابقاً) -------------------
 def extract_movies_from_html(html, base_url='https://ak.sv'):
@@ -55,12 +55,16 @@ def extract_movies_from_html(html, base_url='https://ak.sv'):
             'rating': rating,
             'year': year,
             'genres': genres,
-            'quality': quality
+            'quality': quality,
+            'type': 'movie'
         })
     return movies
 
 def extract_series_from_html(html):
-    return extract_movies_from_html(html)
+    series = extract_movies_from_html(html)
+    for item in series:
+        item['type'] = 'series'
+    return series
 
 def extract_episodes_from_html(html, base_url='https://ak.sv'):
     soup = BeautifulSoup(html, 'html.parser')
@@ -142,12 +146,10 @@ def populate_pages_db_background():
     print("🚀 بدء جلب جميع الصفحات في الخلفية...")
 
     try:
-        # جلب الأفلام
         movies_html = fetch_all_pages('https://ak.sv/movies', max_pages=400, delay=0.5)
         for idx, html in enumerate(movies_html):
             pages_db[f"https://ak.sv/movies?page={idx}"] = {'html': html, 'type': 'movies'}
 
-        # جلب المسلسلات
         series_html = fetch_all_pages('https://ak.sv/series', max_pages=250, delay=0.5)
         for idx, html in enumerate(series_html):
             pages_db[f"https://ak.sv/series?page={idx}"] = {'html': html, 'type': 'series'}
@@ -159,7 +161,6 @@ def populate_pages_db_background():
         _is_loading = False
 
 def start_background_fetch():
-    """تشغيل خيط الجلب إذا لم يكن قد بدأ من قبل"""
     global _background_started
     if not _background_started:
         _background_started = True
@@ -220,11 +221,26 @@ def get_series_episodes(series_url):
             return []
     return extract_episodes_from_html(html)
 
+# ------------------- دوال مساعدة للبحث -------------------
+def get_all_movies():
+    all_movies = []
+    for url, data in pages_db.items():
+        if data['type'] == 'movies':
+            all_movies.extend(extract_movies_from_html(data['html']))
+    return all_movies
+
+def get_all_series():
+    all_series = []
+    for url, data in pages_db.items():
+        if data['type'] == 'series':
+            all_series.extend(extract_series_from_html(data['html']))
+    return all_series
+
 # ------------------- نقاط النهاية API -------------------
 @app.route('/api/movies')
 def api_movies():
     if not pages_db:
-        return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل، حاول مرة أخرى بعد دقيقة'}), 503
+        return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل'}), 503
     for url, data in pages_db.items():
         if data['type'] == 'movies':
             movies = extract_movies_from_html(data['html'])
@@ -234,7 +250,7 @@ def api_movies():
 @app.route('/api/series')
 def api_series():
     if not pages_db:
-        return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل، حاول مرة أخرى بعد دقيقة'}), 503
+        return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل'}), 503
     for url, data in pages_db.items():
         if data['type'] == 'series':
             series = extract_series_from_html(data['html'])
@@ -245,21 +261,60 @@ def api_series():
 def api_all_movies():
     if not pages_db:
         return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل'}), 503
-    all_movies = []
-    for url, data in pages_db.items():
-        if data['type'] == 'movies':
-            all_movies.extend(extract_movies_from_html(data['html']))
+    all_movies = get_all_movies()
     return jsonify({'success': True, 'total': len(all_movies), 'data': all_movies})
 
 @app.route('/api/all-series')
 def api_all_series():
     if not pages_db:
         return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل'}), 503
-    all_series = []
-    for url, data in pages_db.items():
-        if data['type'] == 'series':
-            all_series.extend(extract_series_from_html(data['html']))
+    all_series = get_all_series()
     return jsonify({'success': True, 'total': len(all_series), 'data': all_series})
+
+@app.route('/api/search')
+def api_search():
+    """البحث في الأفلام والمسلسلات"""
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'success': True, 'data': []})
+    
+    results = []
+    # البحث في الأفلام
+    for movie in get_all_movies():
+        if query.lower() in movie['title'].lower():
+            results.append(movie)
+    # البحث في المسلسلات
+    for series in get_all_series():
+        if query.lower() in series['title'].lower():
+            results.append(series)
+    
+    # ترتيب النتائج حسب الأقرب
+    results.sort(key=lambda x: x['title'].lower().find(query.lower()))
+    return jsonify({'success': True, 'data': results[:50]})  # حد أقصى 50 نتيجة
+
+@app.route('/api/status')
+def api_status():
+    """حالة الخادم"""
+    movies_count = len(get_all_movies())
+    series_count = len(get_all_series())
+    return jsonify({
+        'success': True,
+        'movies': movies_count,
+        'series': series_count,
+        'pages': len(pages_db),
+        'loading': _is_loading,
+        'ready': not _is_loading and len(pages_db) > 0
+    })
+
+@app.route('/api/refresh', methods=['POST'])
+def api_refresh():
+    """إعادة جلب البيانات في الخلفية"""
+    if _is_loading:
+        return jsonify({'success': False, 'message': 'جاري التحميل بالفعل'}), 409
+    thread = threading.Thread(target=populate_pages_db_background)
+    thread.daemon = True
+    thread.start()
+    return jsonify({'success': True, 'message': 'بدأ تحديث البيانات في الخلفية'})
 
 @app.route('/api/movie-links')
 def movie_links():
@@ -299,12 +354,9 @@ def index():
 def watch():
     return render_template('watch.html')
 
-# ------------------- بدء الجلب الخلفي فوراً (حتى مع Gunicorn) -------------------
-# يتم استدعاؤها بمجرد استيراد الوحدة
+# ------------------- بدء الجلب الخلفي فوراً -------------------
 start_background_fetch()
 
-# ------------------- (اختياري) تشغيل التطبيق مباشرة للاختبار المحلي -------------------
+# ------------------- تشغيل التطبيق -------------------
 if __name__ == '__main__':
-    # عند التشغيل المحلي بـ python app.py، لن يبدأ خيطاً جديداً لأن start_background_fetch() قد دُعي بالفعل
-    # لكننا نضع debug=False لتجنب إعادة التشغيل المتكرر
     app.run(host='0.0.0.0', port=5001, debug=False)
