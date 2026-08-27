@@ -12,7 +12,25 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 app = Flask(__name__)
-CORS(app)  # تمكين CORS للاختبار
+
+# ======================================================
+#  🔥 إعدادات CORS المتقدمة
+# ======================================================
+CORS(app, 
+     origins="*",  # في الإنتاج، استبدل * بـ https://ak-stream-project.onrender.com
+     allow_headers=["Content-Type", "Accept", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+     expose_headers=["Content-Range", "X-Content-Range"],
+     supports_credentials=False,
+     max_age=600)
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept, Authorization, X-Requested-With'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS, PUT, DELETE'
+    response.headers['Access-Control-Allow-Credentials'] = 'false'
+    return response
 
 # ------------------- الإعدادات -------------------
 HEADERS = {
@@ -24,7 +42,7 @@ pages_db = {}
 _is_loading = False
 _background_started = False
 
-# ------------------- دوال الاستخراج (نفسها سابقاً) -------------------
+# ------------------- دوال الاستخراج -------------------
 def extract_movies_from_html(html, base_url='https://ak.sv'):
     soup = BeautifulSoup(html, 'html.parser')
     movies = []
