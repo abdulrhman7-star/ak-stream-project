@@ -1,29 +1,27 @@
 # ============================================
-# app.py – خادم Flask المحدث ليتوافق مع الواجهة الجديدة
+# app.py – خادم Flask مع جلب تدريجي في الخلفية
 # ============================================
 from flask import Flask, render_template, request, jsonify, Response
-from flask_cors import CORS  # مهم جداً للاتصال عبر ngrok
 import requests
 import json
 import re
+import time
+import threading
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 app = Flask(__name__)
-CORS(app) # تفعيل CORS لجميع المسارات
 
-# ------------------- الإعدادات والترويسات -------------------
+# ------------------- الإعدادات -------------------
 HEADERS = {
     'Referer': 'https://ak.sv/',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
 
-# ------------------- قاعدة البيانات في الذاكرة -------------------
-# سنخزن البيانات هنا بعد جلبها لتسريع الاستجابة للواجهة
-all_movies_db = []
-all_series_db = []
+pages_db = {}  # قاعدة البيانات المؤقتة
+is_loading = False  # علم لمنع تشغيل الجلب مرتين
 
-# دوال استخراج البيانات
+# ------------------- دوال الاستخراج -------------------
 def extract_movies_from_html(html, base_url='https://ak.sv'):
     soup = BeautifulSoup(html, 'html.parser')
     movies = []
@@ -43,14 +41,48 @@ def extract_movies_from_html(html, base_url='https://ak.sv'):
         rating = rating_el.get_text(strip=True).replace('⭐', '').strip() if rating_el else '0.0'
         year_el = item.select_one('.badge-secondary')
         year = year_el.get_text(strip=True) if year_el else '----'
+        genre_els = item.select('.badge-light')
+        genres = [g.get_text(strip=True) for g in genre_els]
+        quality_el = item.select_one('.label.quality')
+        quality = quality_el.get_text(strip=True) if quality_el else ''
         movies.append({
             'title': title,
             'link': link,
             'image': img_src,
             'rating': rating,
-            'year': year
+            'year': year,
+            'genres': genres,
+            'quality': quality
         })
     return movies
+
+def extract_series_from_html(html):
+    return extract_movies_from_html(html)
+
+def extract_episodes_from_html(html, base_url='https://ak.sv'):
+    soup = BeautifulSoup(html, 'html.parser')
+    episodes = []
+    for item in soup.select('#series-episodes .bg-primary2'):
+        link_el = item.select_one('h2 a')
+        if not link_el:
+            continue
+        title = link_el.get_text(strip=True)
+        href = link_el.get('href')
+        if href and not href.startswith('http'):
+            href = urljoin(base_url, href)
+        img_el = item.select_one('img')
+        img_src = img_el.get('data-src') or img_el.get('src') if img_el else ''
+        if img_src and not img_src.startswith('http'):
+            img_src = urljoin(base_url, img_src)
+        number_match = re.search(r'\d+', title) or re.search(r'\d+', href)
+        number = number_match.group(0) if number_match else '?'
+        episodes.append({
+            'number': number,
+            'title': title,
+            'url': href,
+            'image': img_src
+        })
+    return episodes
 
 def extract_video_sources(html):
     soup = BeautifulSoup(html, 'html.parser')
@@ -72,14 +104,71 @@ def extract_video_sources(html):
                 })
     return sources
 
-def get_movie_links(movie_url):
+# ------------------- دوال جلب الصفحات (تعمل في الخلفية) -------------------
+def fetch_all_pages(base_url, max_pages=500, delay=0.5):
+    all_html = []
+    page = 0
+    while page < max_pages:
+        url = f"{base_url}?page={page}" if '?' not in base_url else f"{base_url}&page={page}"
+        print(f"⏳ [Background] جلب {url} ...")
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=15)
+            if response.status_code != 200:
+                print(f"⚠️ توقف: استجابة {response.status_code} في الصفحة {page}")
+                break
+            html = response.text
+            soup = BeautifulSoup(html, 'html.parser')
+            items = soup.select('.entry-box-1')
+            if not items:
+                print(f"✅ لا توجد عناصر في الصفحة {page}، نتوقف.")
+                break
+            all_html.append(html)
+            print(f"✅ تم جلب الصفحة {page} (عدد العناصر: {len(items)})")
+            page += 1
+            time.sleep(delay)
+        except Exception as e:
+            print(f"❌ خطأ في الصفحة {page}: {e}")
+            break
+    return all_html
+
+def populate_pages_db_background():
+    """تُشغل في خيط منفصل حتى لا توقف تشغيل الخادم"""
+    global is_loading
+    if is_loading:
+        return
+    is_loading = True
+    print("🚀 بدء جلب جميع الصفحات في الخلفية...")
+
     try:
-        r = requests.get(movie_url, headers=HEADERS, timeout=15)
-        if r.status_code != 200:
+        # جلب الأفلام
+        movies_html = fetch_all_pages('https://ak.sv/movies', max_pages=400, delay=0.5)
+        for idx, html in enumerate(movies_html):
+            pages_db[f"https://ak.sv/movies?page={idx}"] = {'html': html, 'type': 'movies'}
+
+        # جلب المسلسلات
+        series_html = fetch_all_pages('https://ak.sv/series', max_pages=250, delay=0.5)
+        for idx, html in enumerate(series_html):
+            pages_db[f"https://ak.sv/series?page={idx}"] = {'html': html, 'type': 'series'}
+
+        print(f"✅ اكتمل الجلب! إجمالي الصفحات: {len(pages_db)}")
+    except Exception as e:
+        print(f"❌ فشل الجلب الخلفي: {e}")
+    finally:
+        is_loading = False
+
+# ------------------- دوال جلب الروابط التفصيلية -------------------
+def get_movie_links(movie_url):
+    if movie_url in pages_db:
+        html = pages_db[movie_url]['html']
+    else:
+        try:
+            r = requests.get(movie_url, headers=HEADERS, timeout=15)
+            if r.status_code != 200:
+                return []
+            html = r.text
+            pages_db[movie_url] = {'html': html, 'type': 'movie_detail'}
+        except:
             return []
-        html = r.text
-    except:
-        return []
     
     soup = BeautifulSoup(html, 'html.parser')
     links = []
@@ -90,12 +179,10 @@ def get_movie_links(movie_url):
         quality = quality_map.get(quality_id, quality_id.replace('tab-', ''))
         watch_el = tab.select_one('a.link-show')
         download_el = tab.select_one('a.link-download')
-        if watch_el:
-            links.append({
-                'quality': quality, 
-                'watch': watch_el.get('href'), 
-                'download': download_el.get('href') if download_el else None
-            })
+        watch = watch_el.get('href') if watch_el else None
+        download = download_el.get('href') if download_el else None
+        if watch:
+            links.append({'quality': quality, 'watch': watch, 'download': download})
     
     if not links:
         sources = extract_video_sources(html)
@@ -107,54 +194,65 @@ def get_movie_links(movie_url):
             })
     return links
 
-# ------------------- جلب البيانات الأولية -------------------
-def scrape_pages(base_url, pages_count=3):
-    """جلب عدد معين من الصفحات ودمجها في قائمة واحدة"""
-    results = []
-    for i in range(1, pages_count + 1):
-        url = f"{base_url}/page/{i}" if i > 1 else base_url
+def get_series_episodes(series_url):
+    if series_url in pages_db:
+        html = pages_db[series_url]['html']
+    else:
         try:
-            r = requests.get(url, headers=HEADERS, timeout=10)
-            if r.status_code == 200:
-                items = extract_movies_from_html(r.text, base_url='https://ak.sv')
-                results.extend(items)
-                print(f"تم جلب {url}")
-        except Exception as e:
-            print(f"فشل جلب {url}: {e}")
-    return results
+            r = requests.get(series_url, headers=HEADERS, timeout=15)
+            if r.status_code != 200:
+                return []
+            html = r.text
+            pages_db[series_url] = {'html': html, 'type': 'series_detail'}
+        except:
+            return []
+    return extract_episodes_from_html(html)
 
-def fetch_initial_data():
-    global all_movies_db, all_series_db
-    print("⏳ جاري جلب الأفلام (أول 5 صفحات)...")
-    all_movies_db = scrape_pages('https://ak.sv/movies', pages_count=5)
+# ------------------- نقاط النهاية API -------------------
+@app.route('/api/movies')
+def api_movies():
+    # إذا كانت قاعدة البيانات فارغة، نعطي بيانات وهمية أو نطلب الانتظار
+    if not pages_db:
+        return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل، حاول مرة أخرى بعد دقيقة'}), 503
     
-    print("⏳ جاري جلب المسلسلات (أول 5 صفحات)...")
-    all_series_db = scrape_pages('https://ak.sv/series', pages_count=5)
-    print(f"✅ تم الانتهاء! ({len(all_movies_db)} فيلم و {len(all_series_db)} مسلسل)")
+    first_page_url = 'https://ak.sv/movies'
+    # نبحث عن أول صفحة أفلام في القاعدة
+    for url, data in pages_db.items():
+        if data['type'] == 'movies':
+            movies = extract_movies_from_html(data['html'])
+            return jsonify({'success': True, 'data': movies})
+    return jsonify({'error': 'لا توجد بيانات'}), 404
 
-# ------------------- نقاط النهاية (APIs) الجديدة -------------------
+@app.route('/api/series')
+def api_series():
+    if not pages_db:
+        return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل، حاول مرة أخرى بعد دقيقة'}), 503
+    
+    for url, data in pages_db.items():
+        if data['type'] == 'series':
+            series = extract_series_from_html(data['html'])
+            return jsonify({'success': True, 'data': series})
+    return jsonify({'error': 'لا توجد بيانات'}), 404
+
 @app.route('/api/all-movies')
 def api_all_movies():
-    """إرجاع جميع الأفلام المخزنة"""
-    return jsonify({'success': True, 'data': all_movies_db})
+    if not pages_db:
+        return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل'}), 503
+    all_movies = []
+    for url, data in pages_db.items():
+        if data['type'] == 'movies':
+            all_movies.extend(extract_movies_from_html(data['html']))
+    return jsonify({'success': True, 'total': len(all_movies), 'data': all_movies})
 
 @app.route('/api/all-series')
 def api_all_series():
-    """إرجاع جميع المسلسلات المخزنة"""
-    return jsonify({'success': True, 'data': all_series_db})
-
-@app.route('/api/search')
-def api_search():
-    """البحث في الأفلام والمسلسلات"""
-    query = request.args.get('q', '').lower()
-    if not query:
-        return jsonify({'success': False, 'error': 'كلمة البحث فارغة'})
-    
-    # دمج القائمتين للبحث
-    combined = all_movies_db + all_series_db
-    results = [item for item in combined if query in item['title'].lower()]
-    
-    return jsonify({'success': True, 'data': results})
+    if not pages_db:
+        return jsonify({'success': False, 'error': 'البيانات لا تزال تُحمّل'}), 503
+    all_series = []
+    for url, data in pages_db.items():
+        if data['type'] == 'series':
+            all_series.extend(extract_series_from_html(data['html']))
+    return jsonify({'success': True, 'total': len(all_series), 'data': all_series})
 
 @app.route('/api/movie-links')
 def movie_links():
@@ -162,7 +260,15 @@ def movie_links():
     if not url:
         return jsonify({'error': 'رابط مطلوب'}), 400
     links = get_movie_links(url)
-    return jsonify({'success': True, 'data': links}) # تغيير من links إلى data لتطابق الواجهة
+    return jsonify({'success': True, 'links': links})
+
+@app.route('/api/series-episodes')
+def series_episodes():
+    url = request.args.get('url')
+    if not url:
+        return jsonify({'error': 'رابط مطلوب'}), 400
+    episodes = get_series_episodes(url)
+    return jsonify({'success': True, 'episodes': episodes})
 
 @app.route('/api/stream')
 def stream_video():
@@ -178,7 +284,20 @@ def stream_video():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/watch')
+def watch():
+    return render_template('watch.html')
+
 # ------------------- تشغيل الخادم -------------------
 if __name__ == '__main__':
-    fetch_initial_data() # جلب البيانات عند بدء التشغيل
-    app.run(host='0.0.0.0', port=5001, debug=False)
+    # تشغيل عملية الجلب في خيط منفصل (حتى لا نوقف الخادم)
+    thread = threading.Thread(target=populate_pages_db_background)
+    thread.daemon = True  # ينتهي عند إغلاق التطبيق
+    thread.start()
+    
+    # الخادم يشتغل فوراً
+    app.run(host='0.0.0.0', port=5001, debug=False)  # ضع debug=False في الإنتاج
