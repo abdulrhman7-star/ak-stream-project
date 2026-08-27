@@ -280,6 +280,7 @@
                 transform .2s ease,
                 border-color .2s ease,
                 box-shadow .2s ease;
+            cursor: pointer;
         }
 
         .card:hover {
@@ -631,6 +632,8 @@
     // Configuration
     // ========================================================
 
+    // غيّر هذا الرابط إذا كان الخادم على نطاق مختلف
+    // اتركه فارغاً إذا كانت الواجهة تُخدم من نفس الخادم
     const API_BASE = "";
 
     const PAGE_SIZE = 24;
@@ -813,7 +816,7 @@
 
 
     // ========================================================
-    // Load Catalog
+    // Load Catalog (باستخدام نقاط النهاية الجديدة)
     // ========================================================
 
     async function loadCatalog() {
@@ -831,10 +834,11 @@
 
         try {
 
+            // استخدام نقاط النهاية الجديدة مع ترقيم الصفحات من 0
             const endpoint =
                 currentType === "movies"
-                    ? "/api/movies"
-                    : "/api/series";
+                    ? "/api/v1/feed/movies"
+                    : "/api/v1/feed/series";
 
             const url =
                 `${API_BASE}${endpoint}` +
@@ -878,8 +882,9 @@
                 result.data || []
             );
 
+            // ملاحظة: النتيجة الجديدة تستخدم total_pages (بشرطة سفلية)
             totalPages =
-                result.totalPages || 0;
+                result.total_pages || result.totalPages || 0;
 
             updatePagination();
 
