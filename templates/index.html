@@ -1,3425 +1,1081 @@
-```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>أكوام برو – أفلام ومسلسلات</title>
 
-    <title>أكوام برو — أفلام ومسلسلات</title>
-
-    <!-- HLS.js -->
+    <!-- دعم HLS للتشغيل -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
     <style>
-        :root {
-            --bg: #08090b;
-            --bg2: #101216;
-            --card: #15171c;
-            --card2: #1b1e24;
-            --border: #292d35;
-            --primary: #f5a623;
-            --primary-hover: #ffb83d;
-            --text: #ffffff;
-            --muted: #9297a1;
-            --danger: #ff5252;
-            --success: #39d98a;
-            --blue: #3688ff;
-            --shadow: 0 15px 45px rgba(0,0,0,.35);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
+        /* =============== الأنماط الأساسية =============== */
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            font-family:
-                "Segoe UI",
-                Tahoma,
-                Arial,
-                sans-serif;
-
-            background:
-                radial-gradient(
-                    circle at top,
-                    #17130b 0,
-                    var(--bg) 35%
-                );
-
-            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: radial-gradient(circle at top, #17130b 0%, #08090b 70%);
+            color: #fff;
             min-height: 100vh;
         }
-
-        button,
-        input {
-            font: inherit;
-        }
-
-        button {
-            cursor: pointer;
-        }
-
-        a {
-            color: inherit;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        /* =========================
-           CONTAINER
-        ========================= */
+        a { color: inherit; }
+        button, input { font: inherit; }
+        .hidden { display: none !important; }
 
         .container {
             width: min(1500px, calc(100% - 30px));
             margin: auto;
         }
 
-        /* =========================
-           HEADER
-        ========================= */
-
+        /* =============== الهيدر =============== */
         header {
             position: sticky;
             top: 12px;
             z-index: 100;
-
             margin: 15px 0 25px;
-
             padding: 14px 18px;
-
             display: flex;
             align-items: center;
             gap: 15px;
-
+            flex-wrap: wrap;
             background: rgba(17,18,22,.92);
-            border: 1px solid var(--border);
+            border: 1px solid #292d35;
             border-radius: 18px;
-
             backdrop-filter: blur(18px);
-
-            box-shadow: var(--shadow);
+            box-shadow: 0 15px 45px rgba(0,0,0,.35);
         }
-
         .logo {
-            white-space: nowrap;
-            font-size: 23px;
+            font-size: 24px;
             font-weight: 900;
-            color: var(--primary);
+            color: #f5a623;
+            white-space: nowrap;
         }
-
-        .logo span {
-            color: #fff;
-        }
-
+        .logo span { color: #fff; }
         .search-box {
             flex: 1;
-
             display: flex;
             gap: 8px;
+            min-width: 200px;
         }
-
         .search-box input {
             flex: 1;
-
-            min-width: 100px;
-
             padding: 12px 18px;
-
             background: #0d0f12;
             border: 1px solid #30343c;
             border-radius: 30px;
-
-            color: white;
+            color: #fff;
             outline: none;
-
-            transition: .2s;
         }
-
         .search-box input:focus {
-            border-color: var(--primary);
+            border-color: #f5a623;
             box-shadow: 0 0 0 3px rgba(245,166,35,.08);
         }
-
         .search-box button,
         .refresh-btn {
             border: 0;
             border-radius: 30px;
-
             padding: 11px 18px;
-
-            background: var(--primary);
+            background: #f5a623;
             color: #111;
-
             font-weight: 800;
-
             transition: .2s;
         }
-
         .search-box button:hover,
         .refresh-btn:hover {
-            background: var(--primary-hover);
+            background: #ffb83d;
             transform: translateY(-1px);
         }
-
         .nav-tabs {
             display: flex;
             gap: 4px;
-
             padding: 4px;
-
             background: #0d0f12;
-            border: 1px solid var(--border);
+            border: 1px solid #292d35;
             border-radius: 30px;
         }
-
         .nav-tabs button {
             border: 0;
             border-radius: 25px;
-
             padding: 9px 16px;
-
-            color: var(--muted);
+            color: #9297a1;
             background: transparent;
-
             font-weight: 700;
         }
-
         .nav-tabs button.active {
             color: #111;
-            background: var(--primary);
+            background: #f5a623;
         }
 
-        /* =========================
-           SERVER STATUS
-        ========================= */
-
+        /* =============== شريط الحالة =============== */
         .status-bar {
             display: flex;
             flex-wrap: wrap;
-
             align-items: center;
             justify-content: space-between;
-
             gap: 10px;
-
             margin-bottom: 20px;
             padding: 12px 15px;
-
-            background: var(--bg2);
-
-            border: 1px solid var(--border);
+            background: #101216;
+            border: 1px solid #292d35;
             border-radius: 14px;
         }
-
         .status-left {
             display: flex;
             align-items: center;
             gap: 15px;
-
-            color: var(--muted);
+            color: #9297a1;
             font-size: 14px;
         }
-
         .status-dot {
             width: 9px;
             height: 9px;
-
             border-radius: 50%;
-            background: var(--muted);
-
+            background: #9297a1;
             display: inline-block;
         }
+        .status-dot.online { background: #39d98a; box-shadow: 0 0 10px rgba(57,217,138,.6); }
+        .status-dot.loading { background: #f5a623; animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { opacity: .3; } }
 
-        .status-dot.online {
-            background: var(--success);
-            box-shadow: 0 0 10px rgba(57,217,138,.6);
-        }
-
-        .status-dot.loading {
-            background: var(--primary);
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            50% {
-                opacity: .3;
-            }
-        }
-
-        /* =========================
-           SECTION HEADER
-        ========================= */
-
+        /* =============== شبكة البطاقات =============== */
         .section-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-
             margin: 20px 0;
         }
-
-        .section-header h2 {
-            font-size: 22px;
-        }
-
-        .section-header h2 span {
-            color: var(--primary);
-        }
-
-        .count {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        /* =========================
-           GRID
-        ========================= */
+        .section-header h2 { font-size: 22px; }
+        .section-header h2 span { color: #f5a623; }
+        .count { color: #9297a1; font-size: 14px; }
 
         .grid {
             display: grid;
-
-            grid-template-columns:
-                repeat(
-                    auto-fill,
-                    minmax(175px, 1fr)
-                );
-
+            grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
             gap: 20px;
         }
-
-        /* =========================
-           CARD
-        ========================= */
-
         .card {
             overflow: hidden;
-
-            background: linear-gradient(
-                180deg,
-                var(--card2),
-                var(--card)
-            );
-
-            border: 1px solid var(--border);
+            background: linear-gradient(180deg, #1b1e24, #15171c);
+            border: 1px solid #292d35;
             border-radius: 15px;
-
-            transition:
-                transform .25s,
-                border-color .25s,
-                box-shadow .25s;
-
+            transition: transform .25s, border-color .25s, box-shadow .25s;
             cursor: pointer;
         }
-
         .card:hover {
             transform: translateY(-7px);
-
-            border-color: var(--primary);
-
-            box-shadow:
-                0 15px 35px rgba(0,0,0,.4);
+            border-color: #f5a623;
+            box-shadow: 0 15px 35px rgba(0,0,0,.4);
         }
-
         .poster-wrapper {
             position: relative;
-
             aspect-ratio: 2 / 3;
-
             overflow: hidden;
-
             background: #202329;
         }
-
         .poster {
             width: 100%;
             height: 100%;
-
             object-fit: cover;
-
             display: block;
-
             transition: transform .35s;
         }
-
-        .card:hover .poster {
-            transform: scale(1.04);
-        }
-
+        .card:hover .poster { transform: scale(1.04); }
         .poster-overlay {
             position: absolute;
             inset: 0;
-
             display: flex;
             align-items: flex-end;
-
             padding: 10px;
-
-            background:
-                linear-gradient(
-                    transparent 55%,
-                    rgba(0,0,0,.8)
-                );
+            background: linear-gradient(transparent 55%, rgba(0,0,0,.8));
         }
-
         .quality {
             display: inline-block;
-
             padding: 4px 8px;
-
             border-radius: 7px;
-
-            background: var(--primary);
+            background: #f5a623;
             color: #111;
-
             font-size: 11px;
             font-weight: 900;
         }
-
         .type-badge {
             position: absolute;
-
             top: 10px;
             right: 10px;
-
             padding: 5px 8px;
-
             background: rgba(0,0,0,.75);
-
             border: 1px solid rgba(255,255,255,.15);
-
             border-radius: 7px;
-
             font-size: 11px;
         }
-
         .card-info {
             padding: 12px;
         }
-
         .card-title {
             font-size: 15px;
             font-weight: 800;
-
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
         .card-meta {
             display: flex;
             justify-content: space-between;
-
             margin-top: 8px;
-
-            color: var(--muted);
+            color: #9297a1;
             font-size: 12px;
         }
+        .rating { color: #f5a623; }
 
-        .rating {
-            color: var(--primary);
-        }
-
-        /* =========================
-           LOAD MORE
-        ========================= */
-
+        /* =============== زر تحميل المزيد =============== */
         .load-more-wrapper {
             text-align: center;
             padding: 30px 0 50px;
         }
-
         .load-more {
             border: 0;
-
             padding: 12px 30px;
-
             border-radius: 30px;
-
-            background: var(--primary);
+            background: #f5a623;
             color: #111;
-
             font-weight: 900;
-
             transition: .2s;
         }
+        .load-more:hover { background: #ffb83d; }
+        .load-more:disabled { opacity: .45; cursor: not-allowed; }
 
-        .load-more:hover {
-            background: var(--primary-hover);
-        }
-
-        .load-more:disabled {
-            opacity: .45;
-            cursor: not-allowed;
-        }
-
-        /* =========================
-           LOADING
-        ========================= */
-
+        /* =============== حالة التحميل =============== */
         .loading {
             padding: 70px 20px;
-
             text-align: center;
-
-            color: var(--muted);
-
+            color: #9297a1;
             font-size: 17px;
         }
-
         .spinner {
             width: 35px;
             height: 35px;
-
             margin: 0 auto 15px;
-
             border: 3px solid #333;
-            border-top-color: var(--primary);
-
+            border-top-color: #f5a623;
             border-radius: 50%;
-
             animation: spin .8s linear infinite;
         }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* =========================
-           ERROR
-        ========================= */
-
+        @keyframes spin { to { transform: rotate(360deg); } }
         .error {
             padding: 20px;
-
             background: rgba(255,82,82,.08);
-
             border: 1px solid rgba(255,82,82,.3);
-
             border-radius: 12px;
-
             color: #ff8c8c;
-
             text-align: center;
         }
-
         .retry-btn {
             margin-top: 12px;
-
             padding: 8px 18px;
-
             border: 0;
             border-radius: 20px;
-
-            background: var(--danger);
-            color: white;
-
+            background: #ff5252;
+            color: #fff;
             font-weight: bold;
         }
 
-        /* =========================
-           SEARCH
-        ========================= */
-
-        .search-heading {
-            margin-bottom: 20px;
-        }
-
-        .search-heading span {
-            color: var(--primary);
-        }
-
-        /* =========================
-           MODAL
-        ========================= */
-
+        /* =============== النافذة المنبثقة (مشغل الفيديو) =============== */
         .modal {
             position: fixed;
             inset: 0;
-
             z-index: 1000;
-
             display: none;
-
             padding: 20px;
-
             background: rgba(0,0,0,.94);
-
             overflow-y: auto;
         }
-
-        .modal.active {
-            display: block;
-        }
-
+        .modal.active { display: block; }
         .modal-content {
             width: min(1150px, 100%);
-
             margin: 20px auto;
-
             overflow: hidden;
-
             background: #101216;
-
-            border: 1px solid var(--border);
+            border: 1px solid #292d35;
             border-radius: 18px;
-
             box-shadow: 0 25px 80px rgba(0,0,0,.6);
         }
-
         .modal-header {
             display: flex;
-
             align-items: center;
             justify-content: space-between;
-
-            gap: 15px;
-
             padding: 14px 18px;
-
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid #292d35;
         }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 900;
-        }
-
+        .modal-title { font-size: 18px; font-weight: 900; }
         .close-btn {
             border: 0;
-
             width: 38px;
             height: 38px;
-
             border-radius: 50%;
-
             background: #2a2d34;
-            color: white;
-
+            color: #fff;
             font-size: 20px;
         }
-
-        .close-btn:hover {
-            background: var(--danger);
-        }
-
-        /* =========================
-           VIDEO
-        ========================= */
+        .close-btn:hover { background: #ff5252; }
 
         .video-wrapper {
             position: relative;
-
             width: 100%;
-
             background: #000;
         }
-
         video {
             display: block;
-
             width: 100%;
-
             max-height: 70vh;
-
             background: #000;
         }
-
         .player-loading {
             display: none;
-
             position: absolute;
             inset: 0;
-
             align-items: center;
             justify-content: center;
-
             background: rgba(0,0,0,.5);
-
-            color: white;
+            color: #fff;
         }
-
-        .player-loading.active {
-            display: flex;
-        }
-
-        /* =========================
-           LINKS
-        ========================= */
+        .player-loading.active { display: flex; }
 
         .links-section {
             padding: 20px;
         }
-
         .links-title {
             margin-bottom: 12px;
-
-            color: var(--primary);
-
+            color: #f5a623;
             font-size: 16px;
         }
-
         .links-grid {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-
             margin-bottom: 25px;
         }
-
-        .quality-btn,
-        .download-btn {
+        .quality-btn, .download-btn {
             border: 0;
-
             padding: 9px 15px;
-
             border-radius: 22px;
-
             font-size: 13px;
             font-weight: 800;
-
             transition: .2s;
         }
-
         .quality-btn {
-            background: var(--primary);
+            background: #f5a623;
             color: #111;
         }
-
         .quality-btn:hover {
-            background: var(--primary-hover);
+            background: #ffb83d;
             transform: translateY(-1px);
         }
-
         .quality-btn.active {
-            box-shadow:
-                0 0 0 2px white inset;
+            box-shadow: 0 0 0 2px #fff inset;
         }
-
         .download-btn {
-            background: var(--blue);
-            color: white;
-
+            background: #3688ff;
+            color: #fff;
             text-decoration: none;
         }
-
         .download-btn:hover {
             filter: brightness(1.15);
             transform: translateY(-1px);
         }
 
-        /* =========================
-           SERIES
-        ========================= */
-
-        .series-info {
-            padding: 18px;
-
-            border-bottom: 1px solid var(--border);
-        }
-
+        /* =============== الحلقات =============== */
+        .series-info { padding: 18px; border-bottom: 1px solid #292d35; }
         .episodes-title {
             margin-bottom: 15px;
-
-            color: var(--primary);
+            color: #f5a623;
             font-weight: 900;
         }
-
         .episodes {
             display: grid;
-
-            grid-template-columns:
-                repeat(
-                    auto-fill,
-                    minmax(150px, 1fr)
-                );
-
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
         }
-
         .episode-btn {
             padding: 12px;
-
             background: #1b1e24;
-
-            border: 1px solid var(--border);
+            border: 1px solid #292d35;
             border-radius: 10px;
-
-            color: white;
-
+            color: #fff;
             text-align: right;
-
             transition: .2s;
         }
-
         .episode-btn:hover,
         .episode-btn.active {
-            border-color: var(--primary);
+            border-color: #f5a623;
             background: rgba(245,166,35,.08);
         }
-
         .episode-number {
             display: block;
-
-            color: var(--primary);
-
+            color: #f5a623;
             font-weight: 900;
-
             margin-bottom: 4px;
         }
-
         .episode-name {
             display: block;
-
             overflow: hidden;
-
             white-space: nowrap;
             text-overflow: ellipsis;
-
-            color: var(--muted);
-
+            color: #9297a1;
             font-size: 12px;
         }
 
-        /* =========================
-           TOAST
-        ========================= */
-
+        /* =============== تنبيه (Toast) =============== */
         .toast {
             position: fixed;
-
             bottom: 25px;
             right: 25px;
-
             z-index: 3000;
-
             max-width: 350px;
-
             padding: 13px 18px;
-
             background: #20242b;
-
-            border: 1px solid var(--border);
+            border: 1px solid #292d35;
             border-radius: 12px;
-
-            box-shadow: var(--shadow);
-
+            box-shadow: 0 15px 45px rgba(0,0,0,.35);
             transform: translateY(120px);
-
             opacity: 0;
-
             transition: .3s;
         }
-
         .toast.show {
             transform: translateY(0);
             opacity: 1;
         }
 
-        /* =========================
-           MOBILE
-        ========================= */
-
+        /* =============== توافق الجوال =============== */
         @media (max-width: 900px) {
-
-            header {
-                flex-wrap: wrap;
-            }
-
-            .logo {
-                width: 100%;
-                text-align: center;
-            }
-
-            .search-box {
-                width: 100%;
-            }
-
-            .nav-tabs {
-                width: 100%;
-            }
-
-            .nav-tabs button {
-                flex: 1;
-            }
-
-            .grid {
-                grid-template-columns:
-                    repeat(
-                        auto-fill,
-                        minmax(145px, 1fr)
-                    );
-
-                gap: 13px;
-            }
+            header { flex-direction: column; align-items: stretch; }
+            .logo { text-align: center; }
+            .search-box { width: 100%; }
+            .nav-tabs { width: 100%; justify-content: center; }
+            .grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 13px; }
         }
-
         @media (max-width: 500px) {
-
-            .container {
-                width: min(
-                    100% - 16px,
-                    1500px
-                );
-            }
-
-            header {
-                top: 5px;
-                padding: 12px;
-            }
-
-            .search-box {
-                flex-direction: column;
-            }
-
-            .search-box button {
-                width: 100%;
-            }
-
-            .grid {
-                grid-template-columns:
-                    repeat(2, minmax(0, 1fr));
-
-                gap: 10px;
-            }
-
-            .card-info {
-                padding: 9px;
-            }
-
-            .card-title {
-                font-size: 13px;
-            }
-
-            .modal {
-                padding: 5px;
-            }
-
-            .modal-content {
-                margin: 5px auto;
-                border-radius: 12px;
-            }
-
-            .links-section {
-                padding: 12px;
-            }
-
-            .episodes {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .status-left {
-                width: 100%;
-            }
-
-            .refresh-btn {
-                width: 100%;
-            }
+            .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .card-info { padding: 9px; }
+            .card-title { font-size: 13px; }
+            .modal { padding: 5px; }
+            .modal-content { margin: 5px auto; border-radius: 12px; }
+            .episodes { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
-
 <body>
 
 <div class="container">
 
-    <!-- =========================
-         HEADER
-    ========================== -->
-
+    <!-- ======= الهيدر ======= -->
     <header>
-
-        <div class="logo">
-            🎬 <span>أكوام</span> برو
-        </div>
-
+        <div class="logo">🎬 <span>أكوام</span> برو</div>
         <div class="search-box">
-
-            <input
-                id="searchInput"
-                type="search"
-                autocomplete="off"
-                placeholder="ابحث عن فيلم أو مسلسل..."
-            >
-
-            <button id="searchBtn">
-                🔍 بحث
-            </button>
-
+            <input id="searchInput" type="search" autocomplete="off" placeholder="ابحث عن فيلم أو مسلسل..." />
+            <button id="searchBtn">🔍 بحث</button>
         </div>
-
         <div class="nav-tabs">
-
-            <button
-                id="showMoviesBtn"
-                class="active"
-            >
-                🎬 أفلام
-            </button>
-
-            <button
-                id="showSeriesBtn"
-            >
-                📺 مسلسلات
-            </button>
-
+            <button id="showMoviesBtn" class="active">🎬 أفلام</button>
+            <button id="showSeriesBtn">📺 مسلسلات</button>
         </div>
-
     </header>
 
-
-    <!-- =========================
-         STATUS
-    ========================== -->
-
+    <!-- ======= شريط الحالة ======= -->
     <div class="status-bar">
-
         <div class="status-left">
-
-            <span>
-                <span
-                    id="statusDot"
-                    class="status-dot"
-                ></span>
-
-                <span id="statusText">
-                    جاري الاتصال بالخادم...
-                </span>
-            </span>
-
-            <span>
-                🎬 <b id="moviesCount">0</b>
-            </span>
-
-            <span>
-                📺 <b id="seriesCount">0</b>
-            </span>
-
-            <span>
-                📄 <b id="pagesCount">0</b>
-            </span>
-
+            <span><span id="statusDot" class="status-dot"></span><span id="statusText">جاري الاتصال...</span></span>
+            <span>🎬 <b id="moviesCount">0</b></span>
+            <span>📺 <b id="seriesCount">0</b></span>
+            <span>📄 <b id="pagesCount">0</b></span>
         </div>
-
-        <button
-            id="refreshBtn"
-            class="refresh-btn"
-        >
-            🔄 تحديث البيانات
-        </button>
-
+        <button id="refreshBtn" class="refresh-btn">🔄 تحديث البيانات</button>
     </div>
 
-
-    <!-- =========================
-         MOVIES
-    ========================== -->
-
+    <!-- ======= قسم الأفلام ======= -->
     <section id="moviesWrapper">
-
         <div class="section-header">
-
-            <h2>
-                🎬 <span>الأفلام</span>
-            </h2>
-
-            <span
-                id="moviesTotal"
-                class="count"
-            >
-                0 فيلم
-            </span>
-
+            <h2>🎬 <span>الأفلام</span></h2>
+            <span id="moviesTotal" class="count">0 فيلم</span>
         </div>
-
-        <div
-            id="moviesLoading"
-            class="loading"
-        >
-            <div class="spinner"></div>
-            جاري تحميل الأفلام...
-        </div>
-
-        <div
-            id="moviesGrid"
-            class="grid"
-        ></div>
-
+        <div id="moviesLoading" class="loading"><div class="spinner"></div>جاري تحميل الأفلام...</div>
+        <div id="moviesGrid" class="grid"></div>
         <div class="load-more-wrapper">
-
-            <button
-                id="loadMoreMovies"
-                class="load-more"
-            >
-                تحميل المزيد
-            </button>
-
+            <button id="loadMoreMovies" class="load-more">تحميل المزيد</button>
         </div>
-
     </section>
 
-
-    <!-- =========================
-         SERIES
-    ========================== -->
-
-    <section
-        id="seriesWrapper"
-        class="hidden"
-    >
-
+    <!-- ======= قسم المسلسلات ======= -->
+    <section id="seriesWrapper" class="hidden">
         <div class="section-header">
-
-            <h2>
-                📺 <span>المسلسلات</span>
-            </h2>
-
-            <span
-                id="seriesTotal"
-                class="count"
-            >
-                0 مسلسل
-            </span>
-
+            <h2>📺 <span>المسلسلات</span></h2>
+            <span id="seriesTotal" class="count">0 مسلسل</span>
         </div>
-
-        <div
-            id="seriesLoading"
-            class="loading"
-        >
-            <div class="spinner"></div>
-            جاري تحميل المسلسلات...
-        </div>
-
-        <div
-            id="seriesGrid"
-            class="grid"
-        ></div>
-
+        <div id="seriesLoading" class="loading"><div class="spinner"></div>جاري تحميل المسلسلات...</div>
+        <div id="seriesGrid" class="grid"></div>
         <div class="load-more-wrapper">
-
-            <button
-                id="loadMoreSeries"
-                class="load-more"
-            >
-                تحميل المزيد
-            </button>
-
+            <button id="loadMoreSeries" class="load-more">تحميل المزيد</button>
         </div>
-
     </section>
 
-
-    <!-- =========================
-         SEARCH
-    ========================== -->
-
-    <section
-        id="searchResults"
-        class="hidden"
-    >
-
+    <!-- ======= نتائج البحث ======= -->
+    <section id="searchResults" class="hidden">
         <div class="section-header search-heading">
-
-            <h2>
-                🔎 نتائج البحث عن:
-                <span id="searchQuery"></span>
-            </h2>
-
-            <span
-                id="searchCount"
-                class="count"
-            >
-                0 نتيجة
-            </span>
-
+            <h2>🔎 نتائج البحث عن: <span id="searchQuery"></span></h2>
+            <span id="searchCount" class="count">0 نتيجة</span>
         </div>
-
-        <div
-            id="searchGrid"
-            class="grid"
-        ></div>
-
+        <div id="searchGrid" class="grid"></div>
     </section>
 
 </div>
 
-
-<!-- =========================
-     PLAYER MODAL
-========================== -->
-
-<div
-    id="playerModal"
-    class="modal"
->
-
+<!-- ======= نافذة المشغل ======= -->
+<div id="playerModal" class="modal">
     <div class="modal-content">
-
         <div class="modal-header">
-
-            <div
-                id="playerTitle"
-                class="modal-title"
-            >
-                🎥 المشاهدة
-            </div>
-
-            <button
-                id="closePlayer"
-                class="close-btn"
-                title="إغلاق"
-            >
-                ×
-            </button>
-
+            <div id="playerTitle" class="modal-title">🎥 المشاهدة</div>
+            <button id="closePlayer" class="close-btn">×</button>
         </div>
-
-
         <div class="video-wrapper">
-
-            <video
-                id="videoPlayer"
-                controls
-                playsinline
-                preload="metadata"
-            ></video>
-
-            <div
-                id="playerLoading"
-                class="player-loading"
-            >
-                ⏳ جاري تشغيل الفيديو...
-            </div>
-
+            <video id="videoPlayer" controls playsinline preload="metadata"></video>
+            <div id="playerLoading" class="player-loading">⏳ جاري تشغيل الفيديو...</div>
         </div>
-
-
         <div class="links-section">
-
-            <h3 class="links-title">
-                📺 جودة المشاهدة
-            </h3>
-
-            <div
-                id="qualityLinks"
-                class="links-grid"
-            >
-                <span class="count">
-                    جاري تحميل الروابط...
-                </span>
-            </div>
-
-
-            <h3 class="links-title">
-                ⬇️ روابط التحميل
-            </h3>
-
-            <div
-                id="downloadLinks"
-                class="links-grid"
-            >
-                <span class="count">
-                    لا توجد روابط بعد
-                </span>
-            </div>
-
+            <h3 class="links-title">📺 جودة المشاهدة</h3>
+            <div id="qualityLinks" class="links-grid"><span class="count">جاري تحميل الروابط...</span></div>
+            <h3 class="links-title">⬇️ روابط التحميل</h3>
+            <div id="downloadLinks" class="links-grid"><span class="count">لا توجد روابط بعد</span></div>
         </div>
-
-
-        <!-- حلقات المسلسل -->
-
-        <div
-            id="seriesEpisodesSection"
-            class="series-info hidden"
-        >
-
-            <div class="episodes-title">
-                📺 الحلقات
-            </div>
-
-            <div
-                id="episodes"
-                class="episodes"
-            ></div>
-
+        <div id="seriesEpisodesSection" class="series-info hidden">
+            <div class="episodes-title">📺 الحلقات</div>
+            <div id="episodes" class="episodes"></div>
         </div>
-
     </div>
-
 </div>
 
-
-<!-- TOAST -->
-
-<div
-    id="toast"
-    class="toast"
-></div>
-
+<!-- ======= تنبيه ======= -->
+<div id="toast" class="toast"></div>
 
 <script>
-
-/* =========================================================
-   CONFIG
-========================================================= */
-
-const API_BASE =
-    'https://penknife-reshuffle-subsonic.ngrok-free.dev';
+// =============================================================
+// 1. التكوين – غيّر API_BASE إلى رابط الخادم الخاص بك
+// =============================================================
+const API_BASE = 'https://penknife-reshuffle-subsonic.ngrok-free.dev'; // استبدله برابطك الفعلي
 
 const PAGE_SIZE = 24;
 
-
-/* =========================================================
-   STATE
-========================================================= */
-
+// =============================================================
+// 2. الحالة العامة
+// =============================================================
 let allMovies = [];
 let allSeries = [];
-
 let moviesPage = 1;
 let seriesPage = 1;
-
 let currentVideoUrl = null;
-
 let hlsInstance = null;
 
+// =============================================================
+// 3. عناصر DOM
+// =============================================================
+const moviesGrid = document.getElementById('moviesGrid');
+const seriesGrid = document.getElementById('seriesGrid');
+const searchGrid = document.getElementById('searchGrid');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const playerModal = document.getElementById('playerModal');
+const videoPlayer = document.getElementById('videoPlayer');
+const playerTitle = document.getElementById('playerTitle');
+const playerLoading = document.getElementById('playerLoading');
+const qualityLinks = document.getElementById('qualityLinks');
+const downloadLinks = document.getElementById('downloadLinks');
+const episodes = document.getElementById('episodes');
+const seriesEpisodesSection = document.getElementById('seriesEpisodesSection');
+const toast = document.getElementById('toast');
 
-/* =========================================================
-   ELEMENTS
-========================================================= */
-
-const moviesGrid =
-    document.getElementById('moviesGrid');
-
-const seriesGrid =
-    document.getElementById('seriesGrid');
-
-const searchGrid =
-    document.getElementById('searchGrid');
-
-const searchInput =
-    document.getElementById('searchInput');
-
-const searchBtn =
-    document.getElementById('searchBtn');
-
-const playerModal =
-    document.getElementById('playerModal');
-
-const videoPlayer =
-    document.getElementById('videoPlayer');
-
-const playerTitle =
-    document.getElementById('playerTitle');
-
-const playerLoading =
-    document.getElementById('playerLoading');
-
-const qualityLinks =
-    document.getElementById('qualityLinks');
-
-const downloadLinks =
-    document.getElementById('downloadLinks');
-
-const episodes =
-    document.getElementById('episodes');
-
-const seriesEpisodesSection =
-    document.getElementById(
-        'seriesEpisodesSection'
-    );
-
-const toast =
-    document.getElementById('toast');
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function escapeHTML(value) {
-
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-
+// =============================================================
+// 4. دوال مساعدة
+// =============================================================
+function escapeHTML(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
-
-
 function safeURL(url) {
-
     if (!url) return '';
-
-    try {
-
-        const parsed =
-            new URL(url, API_BASE);
-
-        if (
-            parsed.protocol !== 'http:' &&
-            parsed.protocol !== 'https:'
-        ) {
-            return '';
-        }
-
-        return parsed.href;
-
-    } catch {
-
-        return '';
-
-    }
-
+    try { const u = new URL(url, API_BASE); if (u.protocol !== 'http:' && u.protocol !== 'https:') return ''; return u.href; }
+    catch { return ''; }
 }
-
-
 function imageURL(url) {
-
-    return safeURL(url) ||
-        'https://placehold.co/400x600/191b20/888?text=No+Image';
-
+    return safeURL(url) || 'https://placehold.co/400x600/191b20/888?text=No+Image';
 }
-
-
-function showToast(message) {
-
-    toast.textContent = message;
-
+function showToast(msg) {
+    toast.textContent = msg;
     toast.classList.add('show');
-
-    clearTimeout(
-        showToast.timer
-    );
-
-    showToast.timer =
-        setTimeout(() => {
-
-            toast.classList.remove('show');
-
-        }, 3000);
-
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove('show'), 3000);
 }
-
-
-function setStatus(
-    text,
-    state = ''
-) {
-
-    const dot =
-        document.getElementById(
-            'statusDot'
-        );
-
-    const statusText =
-        document.getElementById(
-            'statusText'
-        );
-
+function setStatus(text, state = '') {
+    const dot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
     statusText.textContent = text;
-
-    dot.className =
-        'status-dot ' + state;
-
+    dot.className = 'status-dot ' + state;
 }
-
-
-async function fetchJSON(
-    endpoint,
-    options = {}
-) {
-
-    const response =
-        await fetch(
-            `${API_BASE}${endpoint}`,
-            {
-                ...options,
-                headers: {
-                    Accept:
-                        'application/json',
-                    ...(options.headers || {})
-                }
-            }
-        );
-
+async function fetchJSON(endpoint, options = {}) {
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: { Accept: 'application/json', ...(options.headers || {}) }
+    });
     let data;
-
-    try {
-        data = await response.json();
-    } catch {
-        throw new Error(
-            `استجابة غير صالحة من الخادم (${response.status})`
-        );
-    }
-
-    if (!response.ok) {
-
-        throw new Error(
-            data.error ||
-            data.message ||
-            `خطأ HTTP ${response.status}`
-        );
-
-    }
-
+    try { data = await res.json(); }
+    catch { throw new Error(`استجابة غير صالحة (${res.status})`); }
+    if (!res.ok) throw new Error(data.error || data.message || `خطأ HTTP ${res.status}`);
     return data;
-
 }
 
-
-/* =========================================================
-   STATUS
-========================================================= */
-
+// =============================================================
+// 5. جلب حالة الخادم
+// =============================================================
 async function loadStatus() {
-
     try {
-
-        const data =
-            await fetchJSON(
-                '/api/status'
-            );
-
-        if (!data.success) {
-            throw new Error(
-                'تعذر الحصول على الحالة'
-            );
-        }
-
-        document.getElementById(
-            'moviesCount'
-        ).textContent =
-            Number(data.movies || 0).toLocaleString('ar');
-
-        document.getElementById(
-            'seriesCount'
-        ).textContent =
-            Number(data.series || 0).toLocaleString('ar');
-
-        document.getElementById(
-            'pagesCount'
-        ).textContent =
-            Number(data.pages || 0).toLocaleString('ar');
-
+        const data = await fetchJSON('/api/status');
+        if (!data.success) throw new Error('تعذر الحصول على الحالة');
+        document.getElementById('moviesCount').textContent = Number(data.movies || 0).toLocaleString('ar');
+        document.getElementById('seriesCount').textContent = Number(data.series || 0).toLocaleString('ar');
+        document.getElementById('pagesCount').textContent = Number(data.pages || 0).toLocaleString('ar');
         if (data.loading) {
-
-            setStatus(
-                'الخادم يجلب البيانات...',
-                'loading'
-            );
-
+            setStatus('الخادم يجلب البيانات...', 'loading');
         } else if (data.ready) {
-
-            setStatus(
-                'الخادم جاهز',
-                'online'
-            );
-
+            setStatus('الخادم جاهز', 'online');
         } else {
-
-            setStatus(
-                'في انتظار البيانات',
-                ''
-            );
-
+            setStatus('في انتظار البيانات', '');
         }
-
         return data;
-
-    } catch (error) {
-
-        setStatus(
-            'تعذر الاتصال بالخادم',
-            ''
-        );
-
-        console.error(error);
-
+    } catch (e) {
+        setStatus('تعذر الاتصال بالخادم', '');
+        console.error(e);
         return null;
-
     }
-
 }
 
-
-/* =========================================================
-   CARD
-========================================================= */
-
+// =============================================================
+// 6. إنشاء بطاقة فيلم/مسلسل
+// =============================================================
 function createCard(item) {
-
-    const card =
-        document.createElement('article');
-
+    const card = document.createElement('article');
     card.className = 'card';
-
-    const type =
-        item.type === 'series'
-            ? 'مسلسل'
-            : 'فيلم';
-
-    const quality =
-        item.quality ||
-        '';
-
+    const type = item.type === 'series' ? 'مسلسل' : 'فيلم';
+    const quality = item.quality || '';
     card.innerHTML = `
-
         <div class="poster-wrapper">
-
-            <img
-                class="poster"
-                src="${escapeHTML(
-                    imageURL(item.image)
-                )}"
-                alt="${escapeHTML(
-                    item.title || 'بدون عنوان'
-                )}"
-                loading="lazy"
-            >
-
-            <div class="poster-overlay">
-
-                ${
-                    quality
-                    ? `
-                        <span class="quality">
-                            ${escapeHTML(quality)}
-                        </span>
-                    `
-                    : ''
-                }
-
-            </div>
-
-            <span class="type-badge">
-                ${type}
-            </span>
-
+            <img class="poster" src="${escapeHTML(imageURL(item.image))}" alt="${escapeHTML(item.title || 'بدون عنوان')}" loading="lazy">
+            <div class="poster-overlay">${quality ? `<span class="quality">${escapeHTML(quality)}</span>` : ''}</div>
+            <span class="type-badge">${type}</span>
         </div>
-
         <div class="card-info">
-
-            <div
-                class="card-title"
-                title="${escapeHTML(
-                    item.title || ''
-                )}"
-            >
-                ${escapeHTML(
-                    item.title || 'غير معروف'
-                )}
-            </div>
-
-            <div class="card-meta">
-
-                <span>
-                    ${escapeHTML(
-                        item.year || '----'
-                    )}
-                </span>
-
-                <span class="rating">
-                    ⭐ ${escapeHTML(
-                        item.rating || '0.0'
-                    )}
-                </span>
-
-            </div>
-
+            <div class="card-title" title="${escapeHTML(item.title || '')}">${escapeHTML(item.title || 'غير معروف')}</div>
+            <div class="card-meta"><span>${escapeHTML(item.year || '----')}</span><span class="rating">⭐ ${escapeHTML(item.rating || '0.0')}</span></div>
         </div>
     `;
-
-
-    card
-        .querySelector('img')
-        .addEventListener(
-            'error',
-            function () {
-
-                this.src =
-                    'https://placehold.co/400x600/191b20/888?text=No+Image';
-
-            },
-            { once: true }
-        );
-
-
-    card.addEventListener(
-        'click',
-        () => {
-
-            if (item.type === 'series') {
-
-                openSeries(item);
-
-            } else {
-
-                openMovie(item);
-
-            }
-
-        }
-    );
-
-
-    return card;
-
-}
-
-
-/* =========================================================
-   RENDER
-========================================================= */
-
-function renderCards(
-    items,
-    container,
-    append = false
-) {
-
-    if (!append) {
-
-        container.innerHTML = '';
-
-    }
-
-    if (!items || !items.length) {
-
-        if (!append) {
-
-            container.innerHTML =
-                `
-                <div class="error">
-                    لا توجد عناصر لعرضها.
-                </div>
-                `;
-
-        }
-
-        return;
-
-    }
-
-    const fragment =
-        document.createDocumentFragment();
-
-    items.forEach(item => {
-
-        fragment.appendChild(
-            createCard(item)
-        );
-
+    card.querySelector('img').addEventListener('error', function() {
+        this.src = 'https://placehold.co/400x600/191b20/888?text=No+Image';
+    }, { once: true });
+    card.addEventListener('click', () => {
+        if (item.type === 'series') openSeries(item);
+        else openMovie(item);
     });
-
-    container.appendChild(fragment);
-
+    return card;
 }
 
+// =============================================================
+// 7. عرض البطاقات في شبكة
+// =============================================================
+function renderCards(items, container, append = false) {
+    if (!append) container.innerHTML = '';
+    if (!items || !items.length) {
+        if (!append) container.innerHTML = `<div class="error">لا توجد عناصر لعرضها.</div>`;
+        return;
+    }
+    const frag = document.createDocumentFragment();
+    items.forEach(item => frag.appendChild(createCard(item)));
+    container.appendChild(frag);
+}
 
-/* =========================================================
-   MOVIES
-========================================================= */
-
+// =============================================================
+// 8. تحميل الأفلام (يستخدم /api/all-movies)
+// =============================================================
 async function loadMovies() {
-
-    const loading =
-        document.getElementById(
-            'moviesLoading'
-        );
-
-    loading.classList.remove(
-        'hidden'
-    );
-
+    const loading = document.getElementById('moviesLoading');
+    loading.classList.remove('hidden');
     try {
-
-        const data =
-            await fetchJSON(
-                '/api/all-movies'
-            );
-
-        if (!data.success) {
-
-            throw new Error(
-                data.error ||
-                'فشل تحميل الأفلام'
-            );
-
-        }
-
-        allMovies =
-            Array.isArray(data.data)
-                ? data.data
-                : [];
-
+        const data = await fetchJSON('/api/all-movies');
+        if (!data.success) throw new Error(data.error || 'فشل تحميل الأفلام');
+        allMovies = Array.isArray(data.data) ? data.data : [];
         moviesPage = 1;
-
-        renderCards(
-            allMovies.slice(
-                0,
-                PAGE_SIZE
-            ),
-            moviesGrid
-        );
-
-        document.getElementById(
-            'moviesTotal'
-        ).textContent =
-            `${allMovies.length.toLocaleString('ar')} فيلم`;
-
-        updateLoadMoreButton(
-            'movies'
-        );
-
-    } catch (error) {
-
-        moviesGrid.innerHTML =
-            `
-            <div class="error">
-                ⚠️ ${escapeHTML(
-                    error.message
-                )}
-
-                <br>
-
-                <button
-                    class="retry-btn"
-                    onclick="loadMovies()"
-                >
-                    إعادة المحاولة
-                </button>
-            </div>
-            `;
-
+        renderCards(allMovies.slice(0, PAGE_SIZE), moviesGrid);
+        document.getElementById('moviesTotal').textContent = `${allMovies.length.toLocaleString('ar')} فيلم`;
+        updateLoadMoreButton('movies');
+    } catch (e) {
+        moviesGrid.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}<br><button class="retry-btn" onclick="loadMovies()">إعادة المحاولة</button></div>`;
     } finally {
-
-        loading.classList.add(
-            'hidden'
-        );
-
+        loading.classList.add('hidden');
     }
-
 }
 
-
-/* =========================================================
-   SERIES
-========================================================= */
-
+// =============================================================
+// 9. تحميل المسلسلات (يستخدم /api/all-series)
+// =============================================================
 async function loadSeries() {
-
-    const loading =
-        document.getElementById(
-            'seriesLoading'
-        );
-
-    loading.classList.remove(
-        'hidden'
-    );
-
+    const loading = document.getElementById('seriesLoading');
+    loading.classList.remove('hidden');
     try {
-
-        const data =
-            await fetchJSON(
-                '/api/all-series'
-            );
-
-        if (!data.success) {
-
-            throw new Error(
-                data.error ||
-                'فشل تحميل المسلسلات'
-            );
-
-        }
-
-        allSeries =
-            Array.isArray(data.data)
-                ? data.data
-                : [];
-
-        allSeries.forEach(
-            item => item.type = 'series'
-        );
-
+        const data = await fetchJSON('/api/all-series');
+        if (!data.success) throw new Error(data.error || 'فشل تحميل المسلسلات');
+        allSeries = Array.isArray(data.data) ? data.data : [];
+        allSeries.forEach(item => item.type = 'series');
         seriesPage = 1;
-
-        renderCards(
-            allSeries.slice(
-                0,
-                PAGE_SIZE
-            ),
-            seriesGrid
-        );
-
-        document.getElementById(
-            'seriesTotal'
-        ).textContent =
-            `${allSeries.length.toLocaleString('ar')} مسلسل`;
-
-        updateLoadMoreButton(
-            'series'
-        );
-
-    } catch (error) {
-
-        seriesGrid.innerHTML =
-            `
-            <div class="error">
-                ⚠️ ${escapeHTML(
-                    error.message
-                )}
-
-                <br>
-
-                <button
-                    class="retry-btn"
-                    onclick="loadSeries()"
-                >
-                    إعادة المحاولة
-                </button>
-            </div>
-            `;
-
+        renderCards(allSeries.slice(0, PAGE_SIZE), seriesGrid);
+        document.getElementById('seriesTotal').textContent = `${allSeries.length.toLocaleString('ar')} مسلسل`;
+        updateLoadMoreButton('series');
+    } catch (e) {
+        seriesGrid.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}<br><button class="retry-btn" onclick="loadSeries()">إعادة المحاولة</button></div>`;
     } finally {
-
-        loading.classList.add(
-            'hidden'
-        );
-
+        loading.classList.add('hidden');
     }
-
 }
 
-
-/* =========================================================
-   LOAD MORE
-========================================================= */
-
-function updateLoadMoreButton(
-    type
-) {
-
-    const button =
-        type === 'movies'
-            ? document.getElementById(
-                'loadMoreMovies'
-            )
-            : document.getElementById(
-                'loadMoreSeries'
-            );
-
-    const collection =
-        type === 'movies'
-            ? allMovies
-            : allSeries;
-
-    const page =
-        type === 'movies'
-            ? moviesPage
-            : seriesPage;
-
-    const displayed =
-        page * PAGE_SIZE;
-
+// =============================================================
+// 10. تحميل المزيد (Pagination)
+// =============================================================
+function updateLoadMoreButton(type) {
+    const button = type === 'movies' ? document.getElementById('loadMoreMovies') : document.getElementById('loadMoreSeries');
+    const collection = type === 'movies' ? allMovies : allSeries;
+    const page = type === 'movies' ? moviesPage : seriesPage;
+    const displayed = page * PAGE_SIZE;
     if (displayed >= collection.length) {
-
         button.disabled = true;
-
-        button.textContent =
-            collection.length
-                ? '✓ تم تحميل الكل'
-                : 'لا توجد عناصر';
-
+        button.textContent = collection.length ? '✓ تم تحميل الكل' : 'لا توجد عناصر';
     } else {
-
         button.disabled = false;
-
-        button.textContent =
-            `تحميل المزيد (${Math.min(
-                PAGE_SIZE,
-                collection.length - displayed
-            )})`;
-
+        button.textContent = `تحميل المزيد (${Math.min(PAGE_SIZE, collection.length - displayed)})`;
     }
-
 }
-
-
 function loadMoreMovies() {
-
-    const start =
-        moviesPage * PAGE_SIZE;
-
-    const batch =
-        allMovies.slice(
-            start,
-            start + PAGE_SIZE
-        );
-
-    renderCards(
-        batch,
-        moviesGrid,
-        true
-    );
-
+    const start = moviesPage * PAGE_SIZE;
+    renderCards(allMovies.slice(start, start + PAGE_SIZE), moviesGrid, true);
     moviesPage++;
-
-    updateLoadMoreButton(
-        'movies'
-    );
-
+    updateLoadMoreButton('movies');
 }
-
-
 function loadMoreSeries() {
-
-    const start =
-        seriesPage * PAGE_SIZE;
-
-    const batch =
-        allSeries.slice(
-            start,
-            start + PAGE_SIZE
-        );
-
-    renderCards(
-        batch,
-        seriesGrid,
-        true
-    );
-
+    const start = seriesPage * PAGE_SIZE;
+    renderCards(allSeries.slice(start, start + PAGE_SIZE), seriesGrid, true);
     seriesPage++;
-
-    updateLoadMoreButton(
-        'series'
-    );
-
+    updateLoadMoreButton('series');
 }
 
-
-/* =========================================================
-   SEARCH
-========================================================= */
-
+// =============================================================
+// 11. البحث
+// =============================================================
 let searchTimer = null;
-
-
-async function performSearch(
-    query
-) {
-
-    query =
-        query.trim();
-
-    if (!query) {
-
-        showHome();
-
-        return;
-
-    }
-
-    document.getElementById(
-        'moviesWrapper'
-    ).classList.add('hidden');
-
-    document.getElementById(
-        'seriesWrapper'
-    ).classList.add('hidden');
-
-    document.getElementById(
-        'searchResults'
-    ).classList.remove('hidden');
-
-    document.getElementById(
-        'searchQuery'
-    ).textContent = query;
-
-    searchGrid.innerHTML =
-        `
-        <div class="loading">
-            <div class="spinner"></div>
-            جاري البحث...
-        </div>
-        `;
-
+async function performSearch(query) {
+    query = query.trim();
+    if (!query) { showHome(); return; }
+    document.getElementById('moviesWrapper').classList.add('hidden');
+    document.getElementById('seriesWrapper').classList.add('hidden');
+    document.getElementById('searchResults').classList.remove('hidden');
+    document.getElementById('searchQuery').textContent = query;
+    searchGrid.innerHTML = `<div class="loading"><div class="spinner"></div>جاري البحث...</div>`;
     try {
-
-        const data =
-            await fetchJSON(
-                `/api/search?q=${encodeURIComponent(
-                    query
-                )}`
-            );
-
-        const results =
-            Array.isArray(data.data)
-                ? data.data
-                : [];
-
+        const data = await fetchJSON(`/api/search?q=${encodeURIComponent(query)}`);
+        const results = Array.isArray(data.data) ? data.data : [];
         results.forEach(item => {
-
-            if (!item.type) {
-
-                item.type =
-                    item.link &&
-                    item.link.includes(
-                        '/series/'
-                    )
-                    ? 'series'
-                    : 'movie';
-
-            }
-
+            if (!item.type) item.type = (item.link && item.link.includes('/series/')) ? 'series' : 'movie';
         });
-
-        document.getElementById(
-            'searchCount'
-        ).textContent =
-            `${results.length.toLocaleString('ar')} نتيجة`;
-
-        renderCards(
-            results,
-            searchGrid
-        );
-
-    } catch (error) {
-
-        searchGrid.innerHTML =
-            `
-            <div class="error">
-                ⚠️ ${escapeHTML(
-                    error.message
-                )}
-            </div>
-            `;
-
+        document.getElementById('searchCount').textContent = `${results.length.toLocaleString('ar')} نتيجة`;
+        renderCards(results, searchGrid);
+    } catch (e) {
+        searchGrid.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}</div>`;
     }
-
 }
-
-
 function showHome() {
-
-    document.getElementById(
-        'searchResults'
-    ).classList.add('hidden');
-
-    document.getElementById(
-        'moviesWrapper'
-    ).classList.remove('hidden');
-
-    document.getElementById(
-        'seriesWrapper'
-    ).classList.add('hidden');
-
-    document.getElementById(
-        'showMoviesBtn'
-    ).classList.add('active');
-
-    document.getElementById(
-        'showSeriesBtn'
-    ).classList.remove('active');
-
+    document.getElementById('searchResults').classList.add('hidden');
+    document.getElementById('moviesWrapper').classList.remove('hidden');
+    document.getElementById('seriesWrapper').classList.add('hidden');
+    document.getElementById('showMoviesBtn').classList.add('active');
+    document.getElementById('showSeriesBtn').classList.remove('active');
 }
 
-
-/* =========================================================
-   MOVIE PLAYER
-========================================================= */
-
-async function openMovie(
-    movie
-) {
-
-    if (!movie.link) {
-
-        showToast(
-            '⚠️ لا يوجد رابط لهذا العنصر'
-        );
-
-        return;
-
-    }
-
-    playerModal.classList.add(
-        'active'
-    );
-
-    document.body.style.overflow =
-        'hidden';
-
-    playerTitle.textContent =
-        `🎥 ${movie.title || 'المشاهدة'}`;
-
-    qualityLinks.innerHTML =
-        `
-        <span class="count">
-            ⏳ جاري تحميل الجودات...
-        </span>
-        `;
-
-    downloadLinks.innerHTML =
-        `
-        <span class="count">
-            جاري تحميل الروابط...
-        </span>
-        `;
-
-    seriesEpisodesSection.classList.add(
-        'hidden'
-    );
-
+// =============================================================
+// 12. تشغيل الفيلم
+// =============================================================
+async function openMovie(movie) {
+    if (!movie.link) { showToast('⚠️ لا يوجد رابط لهذا الفيلم'); return; }
+    playerModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    playerTitle.textContent = `🎥 ${movie.title || 'المشاهدة'}`;
+    qualityLinks.innerHTML = `<span class="count">⏳ جاري تحميل الجودات...</span>`;
+    downloadLinks.innerHTML = `<span class="count">جاري تحميل الروابط...</span>`;
+    seriesEpisodesSection.classList.add('hidden');
     stopVideo();
-
-
     try {
-
-        const data =
-            await fetchJSON(
-                `/api/movie-links?url=${encodeURIComponent(
-                    movie.link
-                )}`
-            );
-
-        /*
-         * app.py الحالي يعيد:
-         *
-         * {
-         *   success: true,
-         *   links: [...]
-         * }
-         *
-         * لذلك نستخدم data.links
-         */
-
-        const links =
-            Array.isArray(data.links)
-                ? data.links
-                : Array.isArray(data.data)
-                    ? data.data
-                    : [];
-
+        const data = await fetchJSON(`/api/movie-links?url=${encodeURIComponent(movie.link)}`);
+        const links = Array.isArray(data.links) ? data.links : (Array.isArray(data.data) ? data.data : []);
         if (!links.length) {
-
-            qualityLinks.innerHTML =
-                `
-                <span class="count">
-                    لا توجد روابط مشاهدة متاحة.
-                </span>
-                `;
-
-            downloadLinks.innerHTML =
-                `
-                <span class="count">
-                    لا توجد روابط تحميل متاحة.
-                </span>
-                `;
-
+            qualityLinks.innerHTML = `<span class="count">لا توجد روابط مشاهدة متاحة.</span>`;
+            downloadLinks.innerHTML = `<span class="count">لا توجد روابط تحميل متاحة.</span>`;
             return;
-
         }
-
-
-        renderVideoLinks(
-            links
-        );
-
-
-        /*
-         * التشغيل التلقائي لأول رابط صالح
-         */
-
-        const first =
-            links.find(
-                item => item.watch
-            );
-
-        if (first) {
-
-            setTimeout(
-                () => {
-
-                    playVideo(
-                        first.watch,
-                        first.quality
-                    );
-
-                },
-                100
-            );
-
-        }
-
-    } catch (error) {
-
-        qualityLinks.innerHTML =
-            `
-            <div class="error">
-                ⚠️ ${escapeHTML(
-                    error.message
-                )}
-            </div>
-            `;
-
-        downloadLinks.innerHTML =
-            '';
-
+        renderVideoLinks(links);
+        const first = links.find(item => item.watch);
+        if (first) setTimeout(() => playVideo(first.watch, first.quality), 100);
+    } catch (e) {
+        qualityLinks.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}</div>`;
+        downloadLinks.innerHTML = '';
     }
-
 }
 
-
-/* =========================================================
-   VIDEO LINKS
-========================================================= */
-
-function renderVideoLinks(
-    links
-) {
-
-    qualityLinks.innerHTML =
-        '';
-
-    downloadLinks.innerHTML =
-        '';
-
-
-    let watchCount = 0;
-    let downloadCount = 0;
-
-
-    links.forEach(
-        (link, index) => {
-
-            const quality =
-                link.quality ||
-                `جودة ${index + 1}`;
-
-
-            if (link.watch) {
-
-                const button =
-                    document.createElement(
-                        'button'
-                    );
-
-                button.className =
-                    'quality-btn';
-
-                button.textContent =
-                    `▶ ${quality}`;
-
-                button.addEventListener(
-                    'click',
-                    () => {
-
-                        document
-                            .querySelectorAll(
-                                '.quality-btn'
-                            )
-                            .forEach(
-                                btn =>
-                                    btn.classList
-                                        .remove(
-                                            'active'
-                                        )
-                            );
-
-                        button.classList.add(
-                            'active'
-                        );
-
-                        playVideo(
-                            link.watch,
-                            quality
-                        );
-
-                    }
-                );
-
-                qualityLinks.appendChild(
-                    button
-                );
-
-                watchCount++;
-
-            }
-
-
-            if (link.download) {
-
-                const url =
-                    safeURL(
-                        link.download
-                    );
-
-                if (url) {
-
-                    const a =
-                        document.createElement(
-                            'a'
-                        );
-
-                    a.className =
-                        'download-btn';
-
-                    a.href = url;
-
-                    a.target = '_blank';
-
-                    a.rel =
-                        'noopener noreferrer';
-
-                    a.textContent =
-                        `⬇ ${quality}`;
-
-                    downloadLinks.appendChild(
-                        a
-                    );
-
-                    downloadCount++;
-
-                }
-
-            }
-
-        }
-    );
-
-
-    if (!watchCount) {
-
-        qualityLinks.innerHTML =
-            `
-            <span class="count">
-                لا توجد روابط مشاهدة.
-            </span>
-            `;
-
-    }
-
-
-    if (!downloadCount) {
-
-        downloadLinks.innerHTML =
-            `
-            <span class="count">
-                لا توجد روابط تحميل.
-            </span>
-            `;
-
-    }
-
-}
-
-
-/* =========================================================
-   PLAY VIDEO
-========================================================= */
-
-async function playVideo(
-    url,
-    quality = ''
-) {
-
-    const videoURL =
-        safeURL(url);
-
-    if (!videoURL) {
-
-        showToast(
-            '⚠️ رابط الفيديو غير صالح'
-        );
-
-        return;
-
-    }
-
-    currentVideoUrl =
-        videoURL;
-
-    playerLoading.classList.add(
-        'active'
-    );
-
-    stopVideo(false);
-
-
-    try {
-
-        /*
-         * HLS
-         */
-
-        const isHLS =
-            /\.m3u8($|\?)/i.test(
-                videoURL
-            );
-
-
-        if (
-            isHLS &&
-            window.Hls &&
-            Hls.isSupported()
-        ) {
-
-            hlsInstance =
-                new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: false
-                });
-
-            hlsInstance.loadSource(
-                videoURL
-            );
-
-            hlsInstance.attachMedia(
-                videoPlayer
-            );
-
-            hlsInstance.on(
-                Hls.Events.MANIFEST_PARSED,
-                () => {
-
-                    playerLoading.classList
-                        .remove(
-                            'active'
-                        );
-
-                    videoPlayer.play()
-                        .catch(() => {});
-
-                }
-            );
-
-            hlsInstance.on(
-                Hls.Events.ERROR,
-                (
-                    event,
-                    data
-                ) => {
-
-                    console.error(
-                        'HLS error:',
-                        data
-                    );
-
-                    if (
-                        data.fatal
-                    ) {
-
-                        playerLoading.classList
-                            .remove(
-                                'active'
-                            );
-
-                        showToast(
-                            '⚠️ تعذر تشغيل بث HLS'
-                        );
-
-                    }
-
-                }
-            );
-
-            return;
-
-        }
-
-
-        /*
-         * Native HLS
-         * Safari / iOS
-         */
-
-        if (
-            isHLS &&
-            videoPlayer.canPlayType(
-                'application/vnd.apple.mpegurl'
-            )
-        ) {
-
-            videoPlayer.src =
-                videoURL;
-
-            videoPlayer.load();
-
-            playerLoading.classList
-                .remove(
-                    'active'
-                );
-
-            await videoPlayer.play()
-                .catch(() => {});
-
-            return;
-
-        }
-
-
-        /*
-         * MP4 / WebM
-         */
-
-        videoPlayer.src =
-            videoURL;
-
-        videoPlayer.load();
-
-        playerLoading.classList
-            .remove(
-                'active'
-            );
-
-        await videoPlayer.play()
-            .catch(() => {
-
-                /*
-                 * المتصفح قد يمنع autoplay
-                 */
-
+// =============================================================
+// 13. عرض روابط المشاهدة والتحميل
+// =============================================================
+function renderVideoLinks(links) {
+    qualityLinks.innerHTML = '';
+    downloadLinks.innerHTML = '';
+    links.forEach((link, index) => {
+        const quality = link.quality || `جودة ${index+1}`;
+        if (link.watch) {
+            const btn = document.createElement('button');
+            btn.className = 'quality-btn';
+            btn.textContent = `▶ ${quality}`;
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                playVideo(link.watch, quality);
             });
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        playerLoading.classList
-            .remove(
-                'active'
-            );
-
-        showToast(
-            '⚠️ تعذر تشغيل الفيديو'
-        );
-
-    }
-
+            qualityLinks.appendChild(btn);
+        }
+        if (link.download) {
+            const url = safeURL(link.download);
+            if (url) {
+                const a = document.createElement('a');
+                a.className = 'download-btn';
+                a.href = url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.textContent = `⬇ ${quality}`;
+                downloadLinks.appendChild(a);
+            }
+        }
+    });
+    if (!qualityLinks.children.length) qualityLinks.innerHTML = `<span class="count">لا توجد روابط مشاهدة.</span>`;
+    if (!downloadLinks.children.length) downloadLinks.innerHTML = `<span class="count">لا توجد روابط تحميل.</span>`;
 }
 
-
-/* =========================================================
-   STOP VIDEO
-========================================================= */
-
-function stopVideo(
-    clearSource = true
-) {
-
-    if (hlsInstance) {
-
-        try {
-
-            hlsInstance.destroy();
-
-        } catch {}
-
-        hlsInstance = null;
-
-    }
-
+// =============================================================
+// 14. تشغيل الفيديو (يدعم HLS و MP4)
+// =============================================================
+async function playVideo(url, quality = '') {
+    const videoURL = safeURL(url);
+    if (!videoURL) { showToast('⚠️ رابط الفيديو غير صالح'); return; }
+    currentVideoUrl = videoURL;
+    playerLoading.classList.add('active');
+    stopVideo(false);
     try {
-
-        videoPlayer.pause();
-
-    } catch {}
-
-
-    if (clearSource) {
-
-        videoPlayer.removeAttribute(
-            'src'
-        );
-
+        const isHLS = /\.m3u8($|\?)/i.test(videoURL);
+        if (isHLS && window.Hls && Hls.isSupported()) {
+            hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: false });
+            hlsInstance.loadSource(videoURL);
+            hlsInstance.attachMedia(videoPlayer);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                playerLoading.classList.remove('active');
+                videoPlayer.play().catch(() => {});
+            });
+            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                console.error('HLS error:', data);
+                if (data.fatal) { playerLoading.classList.remove('active'); showToast('⚠️ تعذر تشغيل بث HLS'); }
+            });
+            return;
+        }
+        if (isHLS && videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+            videoPlayer.src = videoURL;
+            videoPlayer.load();
+            playerLoading.classList.remove('active');
+            await videoPlayer.play().catch(() => {});
+            return;
+        }
+        // MP4 أو غيره
+        videoPlayer.src = videoURL;
         videoPlayer.load();
-
+        playerLoading.classList.remove('active');
+        await videoPlayer.play().catch(() => {});
+    } catch (e) {
+        console.error(e);
+        playerLoading.classList.remove('active');
+        showToast('⚠️ تعذر تشغيل الفيديو');
     }
+}
 
-    playerLoading.classList.remove(
-        'active'
-    );
-
+// =============================================================
+// 15. إيقاف الفيديو
+// =============================================================
+function stopVideo(clearSource = true) {
+    if (hlsInstance) { try { hlsInstance.destroy(); } catch {} hlsInstance = null; }
+    try { videoPlayer.pause(); } catch {}
+    if (clearSource) { videoPlayer.removeAttribute('src'); videoPlayer.load(); }
+    playerLoading.classList.remove('active');
     currentVideoUrl = null;
-
 }
 
-
-/* =========================================================
-   SERIES
-========================================================= */
-
-async function openSeries(
-    series
-) {
-
-    if (!series.link) {
-
-        showToast(
-            '⚠️ لا يوجد رابط لهذا المسلسل'
-        );
-
-        return;
-
-    }
-
-    playerModal.classList.add(
-        'active'
-    );
-
-    document.body.style.overflow =
-        'hidden';
-
-    playerTitle.textContent =
-        `📺 ${series.title || 'المسلسل'}`;
-
-    qualityLinks.innerHTML =
-        `
-        <span class="count">
-            اختر حلقة للبدء...
-        </span>
-        `;
-
-    downloadLinks.innerHTML =
-        '';
-
-    seriesEpisodesSection.classList
-        .remove('hidden');
-
-    episodes.innerHTML =
-        `
-        <div class="loading">
-            <div class="spinner"></div>
-            جاري تحميل الحلقات...
-        </div>
-        `;
-
+// =============================================================
+// 16. فتح المسلسل وعرض الحلقات
+// =============================================================
+async function openSeries(series) {
+    if (!series.link) { showToast('⚠️ لا يوجد رابط للمسلسل'); return; }
+    playerModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    playerTitle.textContent = `📺 ${series.title || 'المسلسل'}`;
+    qualityLinks.innerHTML = `<span class="count">اختر حلقة للبدء...</span>`;
+    downloadLinks.innerHTML = '';
+    seriesEpisodesSection.classList.remove('hidden');
+    episodes.innerHTML = `<div class="loading"><div class="spinner"></div>جاري تحميل الحلقات...</div>`;
     stopVideo();
-
-
     try {
-
-        const data =
-            await fetchJSON(
-                `/api/series-episodes?url=${encodeURIComponent(
-                    series.link
-                )}`
-            );
-
-        const list =
-            Array.isArray(data.episodes)
-                ? data.episodes
-                : Array.isArray(data.data)
-                    ? data.data
-                    : [];
-
-        renderEpisodes(
-            list
-        );
-
-    } catch (error) {
-
-        episodes.innerHTML =
-            `
-            <div class="error">
-                ⚠️ ${escapeHTML(
-                    error.message
-                )}
-            </div>
-            `;
-
+        const data = await fetchJSON(`/api/series-episodes?url=${encodeURIComponent(series.link)}`);
+        const list = Array.isArray(data.episodes) ? data.episodes : (Array.isArray(data.data) ? data.data : []);
+        renderEpisodes(list);
+    } catch (e) {
+        episodes.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}</div>`;
     }
-
 }
 
-
-/* =========================================================
-   EPISODES
-========================================================= */
-
-function renderEpisodes(
-    list
-) {
-
-    episodes.innerHTML =
-        '';
-
-    if (!list.length) {
-
-        episodes.innerHTML =
-            `
-            <div class="error">
-                لا توجد حلقات متاحة.
-            </div>
-            `;
-
-        return;
-
-    }
-
-
-    const fragment =
-        document.createDocumentFragment();
-
-
-    list.forEach(
-        (episode, index) => {
-
-            const button =
-                document.createElement(
-                    'button'
-                );
-
-            button.className =
-                'episode-btn';
-
-            button.innerHTML = `
-
-                <span class="episode-number">
-                    الحلقة ${escapeHTML(
-                        episode.number ||
-                        String(index + 1)
-                    )}
-                </span>
-
-                <span class="episode-name">
-                    ${escapeHTML(
-                        episode.title ||
-                        `الحلقة ${index + 1}`
-                    )}
-                </span>
-
-            `;
-
-
-            button.addEventListener(
-                'click',
-                async () => {
-
-                    document
-                        .querySelectorAll(
-                            '.episode-btn'
-                        )
-                        .forEach(
-                            b =>
-                                b.classList
-                                    .remove(
-                                        'active'
-                                    )
-                        );
-
-                    button.classList.add(
-                        'active'
-                    );
-
-                    await openEpisode(
-                        episode
-                    );
-
-                }
-            );
-
-
-            fragment.appendChild(
-                button
-            );
-
-        }
-    );
-
-
-    episodes.appendChild(
-        fragment
-    );
-
+function renderEpisodes(list) {
+    episodes.innerHTML = '';
+    if (!list.length) { episodes.innerHTML = `<div class="error">لا توجد حلقات متاحة.</div>`; return; }
+    const frag = document.createDocumentFragment();
+    list.forEach((ep, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'episode-btn';
+        btn.innerHTML = `<span class="episode-number">الحلقة ${escapeHTML(ep.number || String(idx+1))}</span><span class="episode-name">${escapeHTML(ep.title || `الحلقة ${idx+1}`)}</span>`;
+        btn.addEventListener('click', async () => {
+            document.querySelectorAll('.episode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            await openEpisode(ep);
+        });
+        frag.appendChild(btn);
+    });
+    episodes.appendChild(frag);
 }
 
-
-/* =========================================================
-   OPEN EPISODE
-========================================================= */
-
-async function openEpisode(
-    episode
-) {
-
-    if (!episode.url) {
-
-        showToast(
-            '⚠️ رابط الحلقة غير متوفر'
-        );
-
-        return;
-
-    }
-
-
-    qualityLinks.innerHTML =
-        `
-        <span class="count">
-            ⏳ جاري جلب رابط الحلقة...
-        </span>
-        `;
-
-    downloadLinks.innerHTML =
-        '';
-
-
+async function openEpisode(episode) {
+    if (!episode.url) { showToast('⚠️ رابط الحلقة غير متوفر'); return; }
+    qualityLinks.innerHTML = `<span class="count">⏳ جاري جلب رابط الحلقة...</span>`;
+    downloadLinks.innerHTML = '';
     try {
-
-        const data =
-            await fetchJSON(
-                `/api/movie-links?url=${encodeURIComponent(
-                    episode.url
-                )}`
-            );
-
-        const links =
-            Array.isArray(data.links)
-                ? data.links
-                : Array.isArray(data.data)
-                    ? data.data
-                    : [];
-
-
-        if (!links.length) {
-
-            qualityLinks.innerHTML =
-                `
-                <span class="count">
-                    لا توجد روابط تشغيل للحلقة.
-                </span>
-                `;
-
-            return;
-
-        }
-
-
-        renderVideoLinks(
-            links
-        );
-
-
-        const first =
-            links.find(
-                item => item.watch
-            );
-
-        if (first) {
-
-            playVideo(
-                first.watch,
-                first.quality
-            );
-
-        }
-
-    } catch (error) {
-
-        qualityLinks.innerHTML =
-            `
-            <div class="error">
-                ⚠️ ${escapeHTML(
-                    error.message
-                )}
-            </div>
-            `;
-
+        const data = await fetchJSON(`/api/movie-links?url=${encodeURIComponent(episode.url)}`);
+        const links = Array.isArray(data.links) ? data.links : (Array.isArray(data.data) ? data.data : []);
+        if (!links.length) { qualityLinks.innerHTML = `<span class="count">لا توجد روابط تشغيل للحلقة.</span>`; return; }
+        renderVideoLinks(links);
+        const first = links.find(item => item.watch);
+        if (first) playVideo(first.watch, first.quality);
+    } catch (e) {
+        qualityLinks.innerHTML = `<div class="error">⚠️ ${escapeHTML(e.message)}</div>`;
     }
-
 }
 
-
-/* =========================================================
-   CLOSE PLAYER
-========================================================= */
-
+// =============================================================
+// 17. إغلاق المشغل
+// =============================================================
 function closePlayer() {
-
-    playerModal.classList.remove(
-        'active'
-    );
-
-    document.body.style.overflow =
-        '';
-
+    playerModal.classList.remove('active');
+    document.body.style.overflow = '';
     stopVideo();
-
-    qualityLinks.innerHTML =
-        '';
-
-    downloadLinks.innerHTML =
-        '';
-
-    episodes.innerHTML =
-        '';
-
-    seriesEpisodesSection.classList
-        .add('hidden');
-
+    qualityLinks.innerHTML = '';
+    downloadLinks.innerHTML = '';
+    episodes.innerHTML = '';
+    seriesEpisodesSection.classList.add('hidden');
 }
 
-
-/* =========================================================
-   REFRESH
-========================================================= */
-
+// =============================================================
+// 18. تحديث البيانات (Refresh)
+// =============================================================
 async function refreshData() {
-
-    const button =
-        document.getElementById(
-            'refreshBtn'
-        );
-
-    const oldText =
-        button.textContent;
-
-    button.disabled = true;
-
-    button.textContent =
-        '⏳ جاري التحديث...';
-
+    const btn = document.getElementById('refreshBtn');
+    const oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ جاري التحديث...';
     try {
-
-        const data =
-            await fetchJSON(
-                '/api/refresh',
-                {
-                    method: 'POST'
-                }
-            );
-
-        showToast(
-            data.message ||
-            'بدأ تحديث البيانات'
-        );
-
-        setStatus(
-            'جاري تحديث البيانات...',
-            'loading'
-        );
-
-        /*
-         * نراقب الحالة حتى يصبح الخادم جاهزاً
-         */
-
+        const data = await fetchJSON('/api/refresh', { method: 'POST' });
+        showToast(data.message || 'بدأ تحديث البيانات');
+        setStatus('جاري تحديث البيانات...', 'loading');
         let attempts = 0;
-
-        const monitor =
-            setInterval(
-                async () => {
-
-                    attempts++;
-
-                    const status =
-                        await loadStatus();
-
-                    if (
-                        status &&
-                        !status.loading
-                    ) {
-
-                        clearInterval(
-                            monitor
-                        );
-
-                        /*
-                         * إعادة تحميل القوائم
-                         */
-
-                        await loadMovies();
-                        await loadSeries();
-
-                    }
-
-                    if (
-                        attempts >= 60
-                    ) {
-
-                        clearInterval(
-                            monitor
-                        );
-
-                    }
-
-                },
-                5000
-            );
-
-    } catch (error) {
-
-        showToast(
-            `⚠️ ${error.message}`
-        );
-
+        const monitor = setInterval(async () => {
+            attempts++;
+            const status = await loadStatus();
+            if (status && !status.loading) {
+                clearInterval(monitor);
+                await loadMovies();
+                await loadSeries();
+            }
+            if (attempts >= 60) clearInterval(monitor);
+        }, 5000);
+    } catch (e) {
+        showToast(`⚠️ ${e.message}`);
     } finally {
-
-        setTimeout(
-            () => {
-
-                button.disabled =
-                    false;
-
-                button.textContent =
-                    oldText;
-
-            },
-            1500
-        );
-
+        setTimeout(() => { btn.disabled = false; btn.textContent = oldText; }, 1500);
     }
-
 }
 
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
-
+// =============================================================
+// 19. التنقل بين الأقسام
+// =============================================================
 function showMovies() {
-
-    document.getElementById(
-        'moviesWrapper'
-    ).classList.remove(
-        'hidden'
-    );
-
-    document.getElementById(
-        'seriesWrapper'
-    ).classList.add(
-        'hidden'
-    );
-
-    document.getElementById(
-        'searchResults'
-    ).classList.add(
-        'hidden'
-    );
-
-    document.getElementById(
-        'showMoviesBtn'
-    ).classList.add(
-        'active'
-    );
-
-    document.getElementById(
-        'showSeriesBtn'
-    ).classList.remove(
-        'active'
-    );
-
+    document.getElementById('moviesWrapper').classList.remove('hidden');
+    document.getElementById('seriesWrapper').classList.add('hidden');
+    document.getElementById('searchResults').classList.add('hidden');
+    document.getElementById('showMoviesBtn').classList.add('active');
+    document.getElementById('showSeriesBtn').classList.remove('active');
 }
-
-
 function showSeries() {
-
-    document.getElementById(
-        'moviesWrapper'
-    ).classList.add(
-        'hidden'
-    );
-
-    document.getElementById(
-        'seriesWrapper'
-    ).classList.remove(
-        'hidden'
-    );
-
-    document.getElementById(
-        'searchResults'
-    ).classList.add(
-        'hidden'
-    );
-
-    document.getElementById(
-        'showMoviesBtn'
-    ).classList.remove(
-        'active'
-    );
-
-    document.getElementById(
-        'showSeriesBtn'
-    ).classList.add(
-        'active'
-    );
-
+    document.getElementById('moviesWrapper').classList.add('hidden');
+    document.getElementById('seriesWrapper').classList.remove('hidden');
+    document.getElementById('searchResults').classList.add('hidden');
+    document.getElementById('showMoviesBtn').classList.remove('active');
+    document.getElementById('showSeriesBtn').classList.add('active');
 }
 
-
-/* =========================================================
-   EVENTS
-========================================================= */
-
-document
-    .getElementById('showMoviesBtn')
-    .addEventListener(
-        'click',
-        showMovies
-    );
-
-
-document
-    .getElementById('showSeriesBtn')
-    .addEventListener(
-        'click',
-        showSeries
-    );
-
-
-document
-    .getElementById('loadMoreMovies')
-    .addEventListener(
-        'click',
-        loadMoreMovies
-    );
-
-
-document
-    .getElementById('loadMoreSeries')
-    .addEventListener(
-        'click',
-        loadMoreSeries
-    );
-
-
-document
-    .getElementById('refreshBtn')
-    .addEventListener(
-        'click',
-        refreshData
-    );
-
-
-document
-    .getElementById('closePlayer')
-    .addEventListener(
-        'click',
-        closePlayer
-    );
-
-
-searchBtn.addEventListener(
-    'click',
-    () => {
-
-        performSearch(
-            searchInput.value
-        );
-
-    }
-);
-
-
-searchInput.addEventListener(
-    'keydown',
-    event => {
-
-        if (
-            event.key === 'Enter'
-        ) {
-
-            event.preventDefault();
-
-            performSearch(
-                searchInput.value
-            );
-
-        }
-
-    }
-);
-
-
-/*
- * بحث تلقائي بعد توقف الكتابة
- */
-
-searchInput.addEventListener(
-    'input',
-    () => {
-
-        clearTimeout(
-            searchTimer
-        );
-
-        const value =
-            searchInput.value.trim();
-
-        if (value.length < 2) {
-            return;
-        }
-
-        searchTimer =
-            setTimeout(
-                () => {
-
-                    performSearch(
-                        value
-                    );
-
-                },
-                600
-            );
-
-    }
-);
-
-
-/*
- * ESC
- */
-
-document.addEventListener(
-    'keydown',
-    event => {
-
-        if (
-            event.key === 'Escape' &&
-            playerModal.classList.contains(
-                'active'
-            )
-        ) {
-
-            closePlayer();
-
-        }
-
-    }
-);
-
-
-/*
- * الضغط خارج النافذة
- */
-
-playerModal.addEventListener(
-    'click',
-    event => {
-
-        if (
-            event.target ===
-            playerModal
-        ) {
-
-            closePlayer();
-
-        }
-
-    }
-);
-
-
-/*
- * تنظيف الفيديو عند مغادرة الصفحة
- */
-
-window.addEventListener(
-    'beforeunload',
-    () => {
-
-        stopVideo();
-
-    }
-);
-
-
-/* =========================================================
-   INITIALIZE
-========================================================= */
-
-async function initialize() {
-
-    setStatus(
-        'جاري الاتصال بالخادم...',
-        'loading'
-    );
-
-
-    /*
-     * الحالة أولاً
-     */
-
-    const status =
-        await loadStatus();
-
-
-    /*
-     * تحميل القوائم بالتوازي
-     */
-
-    await Promise.all([
-        loadMovies(),
-        loadSeries()
-    ]);
-
-
+// =============================================================
+// 20. ربط الأحداث
+// =============================================================
+document.getElementById('showMoviesBtn').addEventListener('click', showMovies);
+document.getElementById('showSeriesBtn').addEventListener('click', showSeries);
+document.getElementById('loadMoreMovies').addEventListener('click', loadMoreMovies);
+document.getElementById('loadMoreSeries').addEventListener('click', loadMoreSeries);
+document.getElementById('refreshBtn').addEventListener('click', refreshData);
+document.getElementById('closePlayer').addEventListener('click', closePlayer);
+searchBtn.addEventListener('click', () => performSearch(searchInput.value));
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); performSearch(searchInput.value); } });
+searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const val = searchInput.value.trim();
+    if (val.length < 2) return;
+    searchTimer = setTimeout(() => performSearch(val), 600);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && playerModal.classList.contains('active')) closePlayer(); });
+playerModal.addEventListener('click', e => { if (e.target === playerModal) closePlayer(); });
+window.addEventListener('beforeunload', () => stopVideo());
+
+// =============================================================
+// 21. تهيئة الصفحة
+// =============================================================
+(async function init() {
+    setStatus('جاري الاتصال بالخادم...', 'loading');
+    const status = await loadStatus();
+    await Promise.all([loadMovies(), loadSeries()]);
     await loadStatus();
-
-
-    /*
-     * إذا كانت البيانات لا تزال
-     * قيد الجلب في الخلفية،
-     * نعيد التحقق دورياً.
-     */
-
-    if (
-        status &&
-        status.loading
-    ) {
-
-        const monitor =
-            setInterval(
-                async () => {
-
-                    const current =
-                        await loadStatus();
-
-                    if (
-                        current &&
-                        !current.loading
-                    ) {
-
-                        clearInterval(
-                            monitor
-                        );
-
-                        await loadMovies();
-                        await loadSeries();
-
-                    }
-
-                },
-                10000
-            );
-
+    if (status && status.loading) {
+        const monitor = setInterval(async () => {
+            const current = await loadStatus();
+            if (current && !current.loading) {
+                clearInterval(monitor);
+                await loadMovies();
+                await loadSeries();
+            }
+        }, 10000);
     }
-
-}
-
-
-/*
- * بدء التطبيق
- */
-
-initialize();
-
+})();
 </script>
-
 </body>
 </html>
-```
