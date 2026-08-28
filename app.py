@@ -4,7 +4,7 @@ import re
 import time
 import threading
 from datetime import datetime, timezone
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 import requests
 from bs4 import BeautifulSoup
@@ -25,7 +25,7 @@ SERIES_MAX_PAGES = 250
 FETCH_DELAY = 0.5
 REQUEST_TIMEOUT = 30
 
-# ======== الكوكيز والهيدرز المستخرجة من طلب ناجح ========
+# ======== الكوكيز والهيدرز (من طلب ناجح) ========
 COOKIES = {
     "HstCfa4403638": "1787511457024",
     "HstCmu4403638": "1787511457024",
@@ -67,7 +67,6 @@ HEADERS = {
     "Priority": "u=1, i",
 }
 
-# ======== إنشاء جلسة طلبات ========
 session = requests.Session()
 session.headers.update(HEADERS)
 session.cookies.update(COOKIES)
@@ -166,7 +165,6 @@ def extract_series_from_html(html):
             series.append(card)
     return series
 
-# ======== تحميل البيانات من القرص عند البدء ========
 def load_catalog_from_disk():
     global catalog
     movies = load_json_file(MOVIES_FILE, [])
@@ -181,7 +179,6 @@ def load_catalog_from_disk():
         return True
     return False
 
-# ======== دوال الجلب باستخدام الجلسة ========
 def fetch_page(url):
     response = session.get(url, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
@@ -195,19 +192,16 @@ def fetch_all_pages():
         _is_loading = True
 
     try:
-        print("🚀 بدء جلب جميع الصفحات باستخدام الجلسة المصرح بها...")
+        print("🚀 بدء جلب جميع الصفحات...")
         fetched_movies = []
         fetched_series = []
 
-        # جلب الصفحة الرئيسية أولاً لتحديث الجلسة إن لزم
         try:
             session.get("https://ak.sv/", timeout=10)
         except:
             pass
 
-        # جلب صفحات الأفلام
         for page in range(MOVIES_MAX_PAGES):
-            # المسار الفعلي للصفحات هو /v/movies/0 وليس /movies?page=0
             url = f"https://ak.sv/v/movies/{page}"
             print(f"⏳ [Movies] page {page}")
             try:
@@ -225,7 +219,6 @@ def fetch_all_pages():
                 print(f"❌ خطأ في page {page}: {e}")
                 break
 
-        # جلب صفحات المسلسلات
         for page in range(SERIES_MAX_PAGES):
             url = f"https://ak.sv/v/series/{page}"
             print(f"⏳ [Series] page {page}")
@@ -244,7 +237,6 @@ def fetch_all_pages():
                 print(f"❌ خطأ في page {page}: {e}")
                 break
 
-        # حذف المكررات
         def deduplicate(items):
             seen = set()
             unique = []
@@ -271,7 +263,7 @@ def fetch_all_pages():
         with _db_lock:
             _is_loading = False
 
-# ======== دوال الـ API ========
+# ======== دوال الـ API المساعدة ========
 def get_movies():
     with _db_lock:
         return list(catalog["movies"])
@@ -302,38 +294,110 @@ def paginate(items, page, limit=24):
         "data": data
     }
 
-# ======== نقاط النهاية (Endpoints) ========
+# =====================================================
+# نقاط النهاية المطلوبة
+# =====================================================
+
 @app.route('/')
 def index():
-    return jsonify({"message": "🚀 خادم أكوام برو يعمل. استخدم /api/v1/feed/movies?page=0"})
+    return jsonify({"message": "🚀 خادم أكوام برو يعمل. استخدم /api/movies?page=0"})
 
-@app.route('/api/v1/feed/movies')
-def feed_movies():
+# 1. /api/movies – قائمة الأفلام مع ترحيل
+@app.route('/api/movies')
+def api_movies():
     page = request.args.get("page", 0)
     limit = request.args.get("limit", 24)
     movies = get_movies()
     result = paginate(movies, page, limit)
     result["success"] = True
-    result["category"] = "movies"
     return jsonify(result)
 
-@app.route('/api/v1/feed/series')
-def feed_series():
+# 2. /api/series – قائمة المسلسلات مع ترحيل
+@app.route('/api/series')
+def api_series():
     page = request.args.get("page", 0)
     limit = request.args.get("limit", 24)
     series = get_series()
     result = paginate(series, page, limit)
     result["success"] = True
-    result["category"] = "series"
     return jsonify(result)
 
-@app.route('/api/all-movies')
-def api_all_movies():
-    return jsonify({"success": True, "total": len(get_movies()), "data": get_movies()})
+# 3. /api/get-link – استخراج رابط الفيديو النظيف
+@app.route('/api/get-link')
+def get_link():
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"success": False, "error": "معامل url مطلوب"}), 400
+    try:
+        html = fetch_page(url)
+        soup = BeautifulSoup(html, "html.parser")
+        video = soup.find("video")
+        if not video:
+            return jsonify({"success": False, "error": "لم يتم العثور على مشغل فيديو"}), 404
+        sources = video.find_all("source")
+        if not sources:
+            return jsonify({"success": False, "error": "لا توجد مصادر فيديو"}), 404
+        # نأخذ أول مصدر (عادة أعلى جودة)
+        src = sources[0].get("src")
+        if not src:
+            return jsonify({"success": False, "error": "المصدر لا يحتوي على رابط"}), 404
+        # تنظيف الرابط من البادئات الفاسدة
+        clean = re.sub(r'^https://ak\.sv(vlc://|intent:)', '', src)
+        clean = re.sub(r'^vlc://|^intent:', '', clean)
+        clean = clean.split('#Intent;')[0] if '#Intent;' in clean else clean
+        if not clean.startswith('http'):
+            return jsonify({"success": False, "error": "رابط غير صالح"}), 404
+        return jsonify({"success": True, "cleanUrl": clean})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/all-series')
-def api_all_series():
-    return jsonify({"success": True, "total": len(get_series()), "data": get_series()})
+# 4. /api/stream – بث الفيديو مع Referer
+@app.route('/api/stream')
+def stream_video():
+    video_url = request.args.get("url")
+    if not video_url:
+        return jsonify({"error": "رابط الفيديو مطلوب"}), 400
+
+    try:
+        # طلب الفيديو مع ترويسة Referer
+        stream_headers = {
+            "Referer": "https://ak.sv/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.get(video_url, headers=stream_headers, stream=True, timeout=30)
+        response.raise_for_status()
+
+        # إعادة التوجيه مع الترويسات الصحيحة
+        return Response(
+            response.iter_content(chunk_size=8192),
+            content_type=response.headers.get('content-type', 'video/mp4'),
+            headers={
+                'Accept-Ranges': 'bytes',
+                'Content-Length': response.headers.get('content-length'),
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": f"فشل بث الفيديو: {str(e)}"}), 500
+
+# 5. /api/search – البحث في الكتالوج
+@app.route('/api/search')
+def api_search():
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"success": True, "total": 0, "data": []})
+    q_lower = query.lower()
+    all_items = get_movies() + get_series()
+    results = []
+    for item in all_items:
+        title = item.get("title", "").lower()
+        if q_lower in title:
+            results.append(item)
+    limit = min(int(request.args.get("limit", 50)), 100)
+    return jsonify({"success": True, "query": query, "total": len(results), "data": results[:limit]})
+
+# =====================================================
+# نقاط نهاية إضافية للتوافق (اختيارية)
+# =====================================================
 
 @app.route('/api/status')
 def api_status():
@@ -354,80 +418,6 @@ def api_refresh():
     thread = threading.Thread(target=fetch_all_pages, daemon=True)
     thread.start()
     return jsonify({"success": True, "message": "بدأ تحديث البيانات في الخلفية"})
-
-@app.route('/api/movie-links')
-def movie_links():
-    url = request.args.get("url")
-    if not url:
-        return jsonify({"success": False, "error": "url مطلوب"}), 400
-    try:
-        html = fetch_page(url)
-        soup = BeautifulSoup(html, "html.parser")
-        video = soup.find("video")
-        if not video:
-            return jsonify({"success": True, "links": []})
-        links = []
-        for source in video.find_all("source"):
-            src = source.get("src")
-            if not src:
-                continue
-            clean = re.sub(r'^https://ak\.sv(vlc://|intent:)', '', src)
-            clean = re.sub(r'^vlc://|^intent:', '', clean)
-            clean = clean.split('#Intent;')[0] if '#Intent;' in clean else clean
-            if clean.startswith('http'):
-                quality = source.get("size", "")
-                links.append({
-                    "quality": quality or "SD",
-                    "watch": clean,
-                    "download": clean
-                })
-        return jsonify({"success": True, "links": links})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/series-episodes')
-def series_episodes():
-    url = request.args.get("url")
-    if not url:
-        return jsonify({"success": False, "error": "url مطلوب"}), 400
-    try:
-        html = fetch_page(url)
-        soup = BeautifulSoup(html, "html.parser")
-        episodes = []
-        for item in soup.select('#series-episodes .bg-primary2'):
-            link_el = item.select_one('h2 a') or item.select_one('a')
-            if not link_el:
-                continue
-            href = link_el.get('href')
-            if not href:
-                continue
-            full_url = absolute_url(href)
-            title = clean_text(link_el.get_text(" ", strip=True))
-            num_match = re.search(r'\d+', title) or re.search(r'\d+', href)
-            number = num_match.group(0) if num_match else '?'
-            episodes.append({
-                "number": number,
-                "title": title,
-                "url": full_url
-            })
-        return jsonify({"success": True, "episodes": episodes})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/search')
-def api_search():
-    query = request.args.get("q", "").strip()
-    if not query:
-        return jsonify({"success": True, "total": 0, "data": []})
-    q_lower = query.lower()
-    all_items = get_movies() + get_series()
-    results = []
-    for item in all_items:
-        title = item.get("title", "").lower()
-        if q_lower in title:
-            results.append(item)
-    limit = min(int(request.args.get("limit", 50)), 100)
-    return jsonify({"success": True, "query": query, "total": len(results), "data": results[:limit]})
 
 # ======== تهيئة الخادم ========
 if not load_catalog_from_disk():
