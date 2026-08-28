@@ -1,1276 +1,439 @@
-# ============================================================
-# app.py
-# AK Stream Project - Catalog API + Background Crawler
-# ============================================================
-
-from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS
-
-import requests
-from bs4 import BeautifulSoup
-
-from urllib.parse import urljoin, urlparse
-from threading import Thread, RLock
-from collections import OrderedDict
-
-import json
 import os
+import json
 import re
 import time
-import logging
+import threading
 from datetime import datetime, timezone
-
-
-# ============================================================
-# Flask
-# ============================================================
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
 app = Flask(__name__)
 CORS(app)
 
-app.config["JSON_AS_ASCII"] = False
+# ======== الإعدادات ========
+BASE_URL = "https://ak.sv"
+DATA_DIR = "data"
+MOVIES_FILE = os.path.join(DATA_DIR, "movies.json")
+SERIES_FILE = os.path.join(DATA_DIR, "series.json")
+METADATA_FILE = os.path.join(DATA_DIR, "metadata.json")
 
+MOVIES_MAX_PAGES = 400
+SERIES_MAX_PAGES = 250
+FETCH_DELAY = 0.5
+REQUEST_TIMEOUT = 30
 
-# ============================================================
-# Configuration
-# ============================================================
-
-SOURCE_BASE = "https://ak.sv"
-
-MOVIES_URL = f"{SOURCE_BASE}/movies"
-SERIES_URL = f"{SOURCE_BASE}/series"
-
-# يمكنك تغييرها حسب حجم المصدر
-MAX_MOVIE_PAGES = int(os.getenv("MAX_MOVIE_PAGES", "400"))
-MAX_SERIES_PAGES = int(os.getenv("MAX_SERIES_PAGES", "250"))
-
-# التأخير بين الطلبات
-CRAWL_DELAY = float(os.getenv("CRAWL_DELAY", "0.5"))
-
-# مهلة HTTP
-REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "20"))
-
-# عدد العناصر في الصفحة API
-DEFAULT_PAGE_SIZE = 24
-MAX_PAGE_SIZE = 100
-
-# حفظ JSON
-DATA_DIR = os.getenv("DATA_DIR", "data")
-SAVE_JSON = os.getenv("SAVE_JSON", "true").lower() == "true"
-
-MOVIES_JSON = os.path.join(DATA_DIR, "movies.json")
-SERIES_JSON = os.path.join(DATA_DIR, "series.json")
-STATUS_JSON = os.path.join(DATA_DIR, "status.json")
-
-
-# ============================================================
-# HTTP Headers
-# ============================================================
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 "
-        "(KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": (
-        "text/html,application/xhtml+xml,"
-        "application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-    ),
-    "Accept-Language": "ar,en-US;q=0.8,en;q=0.5",
-    "Referer": SOURCE_BASE + "/",
+# ======== الكوكيز والهيدرز المستخرجة من طلب ناجح ========
+COOKIES = {
+    "HstCfa4403638": "1787511457024",
+    "HstCmu4403638": "1787511457024",
+    "__dtsu": "6D0017877739451FCBABA677687BFB08",
+    "_gid": "GA1.2.1661775904.1787774035",
+    "_pubcid": "d02d3583-bd2b-4f46-906b-4fb6949ef354",
+    "_cc_id": "b129b91fb9960972158bd9ce2d40d79e",
+    "_cc_cc": "ACZ4nGNQSDI0skyyNExLsrQ0M7A0NzI0tUhKsUxONUoxMUgxt0xlAIKs%2FnrXy53%2F%2F%2FMzwIDQzJ8LWBglz%2F8FCv5nZGRo%2BGLJ%2BFH2wX8od93rF7rI%2FF9T%2Fpsj888dPcSMzN%2B977IAMv%2FkfXVk7uHFc1iQ%2BZdOPWJD5k89hmrcuyWo6v9snILCv3warB%2Fu%2BnOnUPmXIfYh%2BB%2FvWCDzDy6biiK%2FGU09AD9IoR4%3D",
+    "_cc_aud": "ABR4nGNgYGDI6q93ZYADABYMAb4%3D",
+    "panoramaId_expiry": "1787875525004",
+    "XSRF-TOKEN": "eyJpdiI6Im92M1puWjNUOE05MXVFQ3lpR1JmdkE9PSIsInZhbHVlIjoiUmZHVjVNTVhoN3VpVWl0RmpKT3pic21FUVgrdWRTYW1cL3ZmbmZUVHcxSDVrd3NqbmdYSmR5QW9iYTMzaU9LY3QiLCJtYWMiOiJlNjExNjEwOWYwZWY4ZTM2NDE4Y2M4M2M5ZjI5Njg1NTgxNTNhZGRkN2ZhMzQzZmNmYzQ5MDYxNzUxMTAzNjMyIn0%3D",
+    "akwam_session": "eyJpdiI6IldLdUVSN3BzeVplYXRIZ3NqdXNCQWc9PSIsInZhbHVlIjoidjRpSEJzdXZXWmdLU3J2SGc0TzhINTNLVEk3WjJaR3NyUUxjVGFyUXdYeXZBYmVsbkx4XC9FT2xZS3pmR2V0RzkiLCJtYWMiOiIzOTQ0NGNmYTljYmNhNTdiYzc2Mzg2M2ZjNzRhNDA3NmI0ZjMxMGUzYzdlNTY0MzFkOGQwZWVkYTg2ZWUzMTJhIn0%3D",
+    "mymlcksi3OCGvijCdihHCYDpQeVlJWV9hMuNk2hY": "eyJpdiI6Im8yVnZ3bVdmVDZ4bmR1XC9UVytwaTJBPT0iLCJ2YWx1ZSI6IlJablVpSGNBbkl5SytNRlpYQWs1b0hla1ppQytNOFg3c1wveGp6T0ZZN1lZUTJRWG1QeVNBZmdcLzluSk1WQVNsdXVDM1FjbmQrRGVva01PNURaaXMzelFyMXVRTytSN3ZMcHBodVFlTG9nZmh5YWREdThoV3lRb29VaTRaUkk4dlBRQ200emtoVFNWMEtxQmVSZkZYR0IyODViazM0Y3RIS2xsSDlIZ2RQOFptY1NFRm80d2dIamdhXC9aVGlCR0syS3QwYUFIaWJhdW9uaklzWGRCdkxFXC9zR054aG9PTVJYT3M3Mk54V3l0Vm52RUx0MjRpMlpPWkJCNDVqaVhrcXFzb2ZXbndxdkEyakwyaVRHTG9TV3V2NEZlZ21BelQzXC96VytkbnRmYUNSbWozTDhGTUoweTkxcnBaK3o5dWZhTVgiLCJtYWMiOiI4NzcyOTExYzI5NmQ4ZjcwY2FiNDNmMGZmODYyNjkxYTU0MjgwMzA0M2FhMzQxYWJhM2Q2NGY5YzQ3ODM0NTVkIn0%3D",
+    "HstCnv4403638": "6",
+    "HstCns4403638": "15",
+    "cf_clearance": "VIoTNdlP6WFsIfScfuAGREaIGfQVs6dQWG4hdhW2dMA-1787875359-1.2.1.1-xTBYR_.YjKcQWohLsXFKU9yhfy5bzMgvmlhISQrkRRHEvwCLsVdqYSLPXIPnvvYfnnGG8MV9ilE00ZWtefcQEwD20IfIYHQRL0tNJ8SYfM7bguk7GTsS6RU.fv2PMtLja0TC5T2unabmpBrvZhiCpzns9nAmDpYImJXca_JiUkBwTeRDT3B8WLrPK8xorZ3HuM6YWbDmzbnwR0RpZgp.9J_T7OTZWo3VtUINPypX35gpXR7LV0omNHr2fIubxgBaS742lufd_W8RdWqYb5ZUdcOmw6lyhBKGTlV5_ScY4yikaGwAzXIizpA60kSFs3uE75EoPsWHzX6WvRUqL0FoD8ofSKPSr9WeqDw8K1z0msw",
+    "_gat_gtag_UA_262083515_1": "1",
+    "_ga_LYBJP286GM": "GS2.1.s1787875420$o11$g1$t1787875437$j43$l0$h0",
+    "_ga": "GA1.1.1705875142.1787511453",
+    "HstCla4403638": "1787875437888",
+    "HstPn4403638": "3",
+    "HstPt4403638": "38"
 }
 
+HEADERS = {
+    "Accept": "*/*",
+    "Accept-Language": "ar-EG,ar;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Connection": "keep-alive",
+    "Referer": "https://ak.sv/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "User-Agent": "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Mobile Safari/537.36",
+    "X-Requested-With": "XMLHttpRequest",
+    "Origin": "https://ak.sv",
+    "Sec-Ch-Ua": '"Not=A?Brand";v="99", "Google Chrome";v="151", "Chromium";v="151"',
+    "Sec-Ch-Ua-Mobile": "?1",
+    "Sec-Ch-Ua-Platform": '"Android"',
+    "Priority": "u=1, i",
+}
 
-# ============================================================
-# Runtime Database
-# ============================================================
+# ======== إنشاء جلسة طلبات ========
+session = requests.Session()
+session.headers.update(HEADERS)
+session.cookies.update(COOKIES)
 
-# HTML pages
-pages_db = OrderedDict()
-
-# Extracted catalog
-movies_db = []
-series_db = []
-
-# Thread state
-db_lock = RLock()
-
+# ======== المتغيرات العامة ========
+catalog = {"movies": [], "series": [], "updated_at": None}
 _is_loading = False
-_background_started = False
+_db_lock = threading.RLock()
 
-_last_update = None
-_last_error = None
-
-_movie_pages_loaded = 0
-_series_pages_loaded = 0
-
-
-# ============================================================
-# Logging
-# ============================================================
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
-
-logger = logging.getLogger("ak-stream")
-
-
-# ============================================================
-# Utility
-# ============================================================
-
+# ======== دوال مساعدة ========
 def utc_now():
     return datetime.now(timezone.utc).isoformat()
 
+def ensure_data_dir():
+    os.makedirs(DATA_DIR, exist_ok=True)
 
-def normalize_url(url, base_url=SOURCE_BASE):
+def load_json_file(path, default=None):
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return default
+
+def save_json_file(path, data):
+    ensure_data_dir()
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def absolute_url(url):
     if not url:
         return ""
-
     url = url.strip()
-
     if url.startswith("//"):
         return "https:" + url
+    if url.startswith(("http://", "https://")):
+        return url
+    return urljoin(BASE_URL, url)
 
-    if not url.startswith("http://") and not url.startswith("https://"):
-        return urljoin(base_url, url)
-
-    return url
-
-
-def clean_text(value):
-    if not value:
+def clean_text(text):
+    if not text:
         return ""
-
-    return re.sub(r"\s+", " ", value).strip()
-
-
-def safe_float(value, default=0):
-    try:
-        return float(value)
-    except Exception:
-        return default
-
-
-# ============================================================
-# Extract catalog cards
-# ============================================================
-
-def extract_catalog_from_html(html, item_type):
-    """
-    استخراج عناصر .entry-box-1 من صفحة الأفلام/المسلسلات.
-    """
-
-    soup = BeautifulSoup(html, "html.parser")
-
-    results = []
-
-    for item in soup.select(".entry-box-1"):
-
-        # ----------------------------------------------------
-        # Title / URL
-        # ----------------------------------------------------
-
-        title_el = item.select_one(".entry-title a")
-
-        if not title_el:
-            continue
-
-        title = clean_text(title_el.get_text(" ", strip=True))
-
-        link = normalize_url(title_el.get("href"))
-
-        if not title or not link:
-            continue
-
-        # ----------------------------------------------------
-        # Image
-        # ----------------------------------------------------
-
-        image = ""
-
-        img_el = item.select_one("img")
-
-        if img_el:
-
-            candidates = [
-                img_el.get("data-src"),
-                img_el.get("data-lazy-src"),
-                img_el.get("data-original"),
-                img_el.get("src"),
-            ]
-
-            for candidate in candidates:
-                if candidate:
-                    image = normalize_url(candidate)
-                    break
-
-        # ----------------------------------------------------
-        # Rating
-        # ----------------------------------------------------
-
-        rating = "0.0"
-
-        rating_el = item.select_one(".label.rating")
-
-        if rating_el:
-            rating = clean_text(
-                rating_el.get_text(" ", strip=True)
-                .replace("⭐", "")
-            )
-
-        # ----------------------------------------------------
-        # Year
-        # ----------------------------------------------------
-
-        year = ""
-
-        year_selectors = [
-            ".badge-secondary",
-            ".year",
-            ".release-year",
-        ]
-
-        for selector in year_selectors:
-
-            year_el = item.select_one(selector)
-
-            if year_el:
-
-                candidate = clean_text(
-                    year_el.get_text(" ", strip=True)
-                )
-
-                if candidate:
-                    year = candidate
-                    break
-
-        if not year:
-
-            year_match = re.search(
-                r"\b(19|20)\d{2}\b",
-                item.get_text(" ", strip=True)
-            )
-
-            if year_match:
-                year = year_match.group(0)
-
-        # ----------------------------------------------------
-        # Genres
-        # ----------------------------------------------------
-
-        genres = []
-
-        for genre_el in item.select(".badge-light"):
-
-            genre = clean_text(
-                genre_el.get_text(" ", strip=True)
-            )
-
-            if genre and genre not in genres:
-                genres.append(genre)
-
-        # ----------------------------------------------------
-        # Quality
-        # ----------------------------------------------------
-
-        quality = ""
-
-        quality_el = item.select_one(".label.quality")
-
-        if quality_el:
-            quality = clean_text(
-                quality_el.get_text(" ", strip=True)
-            )
-
-        # ----------------------------------------------------
-        # Result
-        # ----------------------------------------------------
-
-        results.append({
-            "id": link,
-            "title": title,
-            "link": link,
-            "image": image,
-            "rating": rating,
-            "year": year,
-            "genres": genres,
-            "quality": quality,
-            "type": item_type,
-        })
-
-    return results
-
-
-# ============================================================
-# Deduplicate
-# ============================================================
-
-def deduplicate_items(items):
-
-    result = []
-    seen = set()
-
-    for item in items:
-
-        key = (
-            item.get("link")
-            or item.get("id")
-            or item.get("title", "").lower()
-        )
-
-        if not key:
-            continue
-
-        if key in seen:
-            continue
-
-        seen.add(key)
-        result.append(item)
-
-    return result
-
-
-# ============================================================
-# Fetch one page
-# ============================================================
-
-def fetch_page(base_url, page):
-
-    if page == 0:
-        url = base_url
-    else:
-        url = f"{base_url}?page={page}"
-
-    logger.info("Fetching %s", url)
-
-    try:
-
-        response = requests.get(
-            url,
-            headers=HEADERS,
-            timeout=REQUEST_TIMEOUT
-        )
-
-        if response.status_code != 200:
-
-            logger.warning(
-                "HTTP %s for %s",
-                response.status_code,
-                url
-            )
-
-            return None
-
-        response.encoding = response.apparent_encoding or response.encoding
-
-        html = response.text
-
-        if not html:
-            return None
-
-        return html
-
-    except requests.RequestException as exc:
-
-        logger.error(
-            "Request error %s: %s",
-            url,
-            exc
-        )
-
+    return re.sub(r"\s+", " ", text).strip()
+
+def extract_card(item, media_type):
+    title_el = item.select_one(".entry-title a") or item.select_one("a")
+    if not title_el:
         return None
+    title = clean_text(title_el.get_text(" ", strip=True))
+    link = absolute_url(title_el.get("href", ""))
+    if not title or not link:
+        return None
+    rating_el = item.select_one(".label.rating")
+    rating = clean_text(rating_el.get_text(" ", strip=True)).replace("⭐", "").strip() if rating_el else ""
+    year_el = item.select_one(".badge-secondary")
+    year = clean_text(year_el.get_text(" ", strip=True)) if year_el else ""
+    genres = [clean_text(g.get_text(" ", strip=True)) for g in item.select(".badge-light")]
+    quality_el = item.select_one(".label.quality")
+    quality = clean_text(quality_el.get_text(" ", strip=True)) if quality_el else ""
+    img = item.select_one("img")
+    image = ""
+    if img:
+        for attr in ["data-src", "data-lazy-src", "data-original", "src"]:
+            val = img.get(attr)
+            if val:
+                image = absolute_url(val)
+                break
+    return {
+        "id": link.split("/")[-1] if link else "",
+        "title": title,
+        "link": link,
+        "image": image,
+        "rating": rating,
+        "year": year,
+        "genres": genres,
+        "quality": quality,
+        "type": media_type
+    }
 
-
-# ============================================================
-# Fetch category pages
-# ============================================================
-
-def crawl_category(base_url, item_type, max_pages):
-
-    global _movie_pages_loaded
-    global _series_pages_loaded
-
-    pages_loaded = 0
-
-    for page in range(max_pages):
-
-        html = fetch_page(base_url, page)
-
-        if not html:
-            logger.info(
-                "Stopping %s crawler at page %s",
-                item_type,
-                page
-            )
-            break
-
-        items = extract_catalog_from_html(
-            html,
-            item_type
-        )
-
-        if not items:
-
-            logger.info(
-                "No items found on %s page %s",
-                item_type,
-                page
-            )
-
-            break
-
-        page_url = (
-            base_url
-            if page == 0
-            else f"{base_url}?page={page}"
-        )
-
-        with db_lock:
-
-            pages_db[page_url] = {
-                "html": html,
-                "type": item_type,
-                "page": page,
-                "items_count": len(items),
-                "updated_at": utc_now(),
-            }
-
-        pages_loaded += 1
-
-        if item_type == "movie":
-            _movie_pages_loaded = pages_loaded
-        else:
-            _series_pages_loaded = pages_loaded
-
-        logger.info(
-            "%s page=%s items=%s",
-            item_type,
-            page,
-            len(items)
-        )
-
-        time.sleep(CRAWL_DELAY)
-
-    return pages_loaded
-
-
-# ============================================================
-# Rebuild catalog from pages_db
-# ============================================================
-
-def rebuild_catalog():
-
-    global movies_db
-    global series_db
-
+def extract_movies_from_html(html):
+    soup = BeautifulSoup(html, "html.parser")
     movies = []
+    for item in soup.select(".entry-box-1"):
+        card = extract_card(item, "movie")
+        if card:
+            movies.append(card)
+    return movies
+
+def extract_series_from_html(html):
+    soup = BeautifulSoup(html, "html.parser")
     series = []
+    for item in soup.select(".entry-box-1"):
+        card = extract_card(item, "series")
+        if card:
+            series.append(card)
+    return series
 
-    with db_lock:
+# ======== تحميل البيانات من القرص عند البدء ========
+def load_catalog_from_disk():
+    global catalog
+    movies = load_json_file(MOVIES_FILE, [])
+    series = load_json_file(SERIES_FILE, [])
+    metadata = load_json_file(METADATA_FILE, {})
+    if movies or series:
+        with _db_lock:
+            catalog["movies"] = movies
+            catalog["series"] = series
+            catalog["updated_at"] = metadata.get("updated_at")
+        print(f"📦 تحميل من القرص: {len(movies)} فيلم, {len(series)} مسلسل")
+        return True
+    return False
 
-        for page_url, page_data in pages_db.items():
+# ======== دوال الجلب باستخدام الجلسة ========
+def fetch_page(url):
+    response = session.get(url, timeout=REQUEST_TIMEOUT)
+    response.raise_for_status()
+    return response.text
 
-            html = page_data.get("html", "")
-            item_type = page_data.get("type")
-
-            if not html:
-                continue
-
-            if item_type == "movie":
-
-                movies.extend(
-                    extract_catalog_from_html(
-                        html,
-                        "movie"
-                    )
-                )
-
-            elif item_type == "series":
-
-                series.extend(
-                    extract_catalog_from_html(
-                        html,
-                        "series"
-                    )
-                )
-
-        movies = deduplicate_items(movies)
-        series = deduplicate_items(series)
-
-        movies_db = movies
-        series_db = series
-
-    logger.info(
-        "Catalog rebuilt: movies=%s series=%s",
-        len(movies_db),
-        len(series_db)
-    )
-
-
-# ============================================================
-# Save JSON database
-# ============================================================
-
-def save_database():
-
-    if not SAVE_JSON:
-        return
-
-    try:
-
-        os.makedirs(DATA_DIR, exist_ok=True)
-
-        with db_lock:
-
-            with open(
-                MOVIES_JSON,
-                "w",
-                encoding="utf-8"
-            ) as file:
-
-                json.dump(
-                    movies_db,
-                    file,
-                    ensure_ascii=False,
-                    indent=2
-                )
-
-            with open(
-                SERIES_JSON,
-                "w",
-                encoding="utf-8"
-            ) as file:
-
-                json.dump(
-                    series_db,
-                    file,
-                    ensure_ascii=False,
-                    indent=2
-                )
-
-            status = {
-                "updated_at": utc_now(),
-                "movies": len(movies_db),
-                "series": len(series_db),
-                "pages": len(pages_db),
-            }
-
-            with open(
-                STATUS_JSON,
-                "w",
-                encoding="utf-8"
-            ) as file:
-
-                json.dump(
-                    status,
-                    file,
-                    ensure_ascii=False,
-                    indent=2
-                )
-
-        logger.info("JSON database saved")
-
-    except Exception as exc:
-
-        logger.error(
-            "Failed to save JSON database: %s",
-            exc
-        )
-
-
-# ============================================================
-# Load JSON database
-# ============================================================
-
-def load_database():
-
-    global movies_db
-    global series_db
-    global _last_update
-
-    if not SAVE_JSON:
-        return
-
-    try:
-
-        if os.path.exists(MOVIES_JSON):
-
-            with open(
-                MOVIES_JSON,
-                "r",
-                encoding="utf-8"
-            ) as file:
-
-                movies_db = json.load(file)
-
-        if os.path.exists(SERIES_JSON):
-
-            with open(
-                SERIES_JSON,
-                "r",
-                encoding="utf-8"
-            ) as file:
-
-                series_db = json.load(file)
-
-        if os.path.exists(STATUS_JSON):
-
-            with open(
-                STATUS_JSON,
-                "r",
-                encoding="utf-8"
-            ) as file:
-
-                status = json.load(file)
-
-                _last_update = status.get(
-                    "updated_at"
-                )
-
-        logger.info(
-            "Loaded cached JSON: movies=%s series=%s",
-            len(movies_db),
-            len(series_db)
-        )
-
-    except Exception as exc:
-
-        logger.warning(
-            "Could not load JSON cache: %s",
-            exc
-        )
-
-
-# ============================================================
-# Background crawler
-# ============================================================
-
-def populate_database():
-
-    global _is_loading
-    global _last_update
-    global _last_error
-
-    if _is_loading:
-        return False
-
-    with db_lock:
-
+def fetch_all_pages():
+    global _is_loading, catalog
+    with _db_lock:
         if _is_loading:
-            return False
-
+            return
         _is_loading = True
-        _last_error = None
-
-    logger.info("==========================================")
-    logger.info("Starting background crawler")
-    logger.info("==========================================")
 
     try:
+        print("🚀 بدء جلب جميع الصفحات باستخدام الجلسة المصرح بها...")
+        fetched_movies = []
+        fetched_series = []
 
-        # ----------------------------------------------------
-        # Movies
-        # ----------------------------------------------------
+        # جلب الصفحة الرئيسية أولاً لتحديث الجلسة إن لزم
+        try:
+            session.get("https://ak.sv/", timeout=10)
+        except:
+            pass
 
-        crawl_category(
-            MOVIES_URL,
-            "movie",
-            MAX_MOVIE_PAGES
-        )
+        # جلب صفحات الأفلام
+        for page in range(MOVIES_MAX_PAGES):
+            # المسار الفعلي للصفحات هو /v/movies/0 وليس /movies?page=0
+            url = f"https://ak.sv/v/movies/{page}"
+            print(f"⏳ [Movies] page {page}")
+            try:
+                html = fetch_page(url)
+                soup = BeautifulSoup(html, "html.parser")
+                items = soup.select(".entry-box-1")
+                if not items:
+                    print(f"🛑 لا توجد عناصر في page {page}، توقف.")
+                    break
+                movies = extract_movies_from_html(html)
+                fetched_movies.extend(movies)
+                print(f"✅ page {page} ({len(items)} عناصر)")
+                time.sleep(FETCH_DELAY)
+            except Exception as e:
+                print(f"❌ خطأ في page {page}: {e}")
+                break
 
-        # ----------------------------------------------------
-        # Series
-        # ----------------------------------------------------
+        # جلب صفحات المسلسلات
+        for page in range(SERIES_MAX_PAGES):
+            url = f"https://ak.sv/v/series/{page}"
+            print(f"⏳ [Series] page {page}")
+            try:
+                html = fetch_page(url)
+                soup = BeautifulSoup(html, "html.parser")
+                items = soup.select(".entry-box-1")
+                if not items:
+                    print(f"🛑 لا توجد عناصر في page {page}، توقف.")
+                    break
+                series = extract_series_from_html(html)
+                fetched_series.extend(series)
+                print(f"✅ page {page} ({len(items)} عناصر)")
+                time.sleep(FETCH_DELAY)
+            except Exception as e:
+                print(f"❌ خطأ في page {page}: {e}")
+                break
 
-        crawl_category(
-            SERIES_URL,
-            "series",
-            MAX_SERIES_PAGES
-        )
+        # حذف المكررات
+        def deduplicate(items):
+            seen = set()
+            unique = []
+            for item in items:
+                key = item.get("link")
+                if key and key not in seen:
+                    seen.add(key)
+                    unique.append(item)
+            return unique
 
-        # ----------------------------------------------------
-        # Build catalog
-        # ----------------------------------------------------
+        with _db_lock:
+            catalog["movies"] = deduplicate(fetched_movies)
+            catalog["series"] = deduplicate(fetched_series)
+            catalog["updated_at"] = utc_now()
 
-        rebuild_catalog()
+        save_json_file(MOVIES_FILE, catalog["movies"])
+        save_json_file(SERIES_FILE, catalog["series"])
+        save_json_file(METADATA_FILE, {"updated_at": catalog["updated_at"]})
 
-        # ----------------------------------------------------
-        # Save
-        # ----------------------------------------------------
-
-        save_database()
-
-        _last_update = utc_now()
-
-        logger.info(
-            "Crawler completed successfully"
-        )
-
-    except Exception as exc:
-
-        _last_error = str(exc)
-
-        logger.exception(
-            "Crawler failed"
-        )
-
+        print(f"✅ اكتمل الجلب: {len(catalog['movies'])} فيلم, {len(catalog['series'])} مسلسل")
+    except Exception as e:
+        print(f"❌ خطأ عام في الجلب: {e}")
     finally:
+        with _db_lock:
+            _is_loading = False
 
-        _is_loading = False
+# ======== دوال الـ API ========
+def get_movies():
+    with _db_lock:
+        return list(catalog["movies"])
 
-    return True
+def get_series():
+    with _db_lock:
+        return list(catalog["series"])
 
-
-def start_background_fetch():
-
-    global _background_started
-
-    if _background_started:
-        return
-
-    _background_started = True
-
-    thread = Thread(
-        target=populate_database,
-        daemon=True
-    )
-
-    thread.start()
-
-    logger.info(
-        "Background crawler started"
-    )
-
-
-# ============================================================
-# Pagination
-# ============================================================
-
-def paginate(items, page, limit):
-
-    total = len(items)
-
-    if page < 0:
+def paginate(items, page, limit=24):
+    try:
+        page = max(0, int(page))
+    except:
         page = 0
-
-    if limit < 1:
-        limit = DEFAULT_PAGE_SIZE
-
-    if limit > MAX_PAGE_SIZE:
-        limit = MAX_PAGE_SIZE
-
+    try:
+        limit = max(1, min(int(limit), 100))
+    except:
+        limit = 24
+    total = len(items)
     start = page * limit
     end = start + limit
-
     data = items[start:end]
-
-    total_pages = (
-        (total + limit - 1) // limit
-        if total
-        else 0
-    )
-
-    has_more = end < total
-
     return {
-        "data": data,
         "page": page,
         "limit": limit,
         "total": total,
-        "totalPages": total_pages,
-        "hasMore": has_more,
+        "total_pages": (total + limit - 1) // limit if total else 0,
+        "hasMore": end < total,
+        "data": data
     }
 
-
-# ============================================================
-# Search
-# ============================================================
-
-def search_catalog(query, item_type=None):
-
-    query = clean_text(query).lower()
-
-    if not query:
-        return []
-
-    if item_type == "movie":
-        source = movies_db
-
-    elif item_type == "series":
-        source = series_db
-
-    else:
-        source = movies_db + series_db
-
-    results = []
-
-    for item in source:
-
-        title = clean_text(
-            item.get("title", "")
-        )
-
-        if query in title.lower():
-
-            title_lower = title.lower()
-
-            if title_lower == query:
-                score = 0
-
-            elif title_lower.startswith(query):
-                score = 1
-
-            else:
-                score = 2
-
-            results.append(
-                (score, title_lower, item)
-            )
-
-    results.sort(
-        key=lambda value: (
-            value[0],
-            value[1]
-        )
-    )
-
-    return [
-        item
-        for _, _, item in results
-    ]
-
-
-# ============================================================
-# API: Status
-# ============================================================
-
-@app.route("/api/status")
-def api_status():
-
-    with db_lock:
-
-        return jsonify({
-            "success": True,
-
-            "ready": (
-                len(movies_db) > 0
-                or len(series_db) > 0
-            ),
-
-            "loading": _is_loading,
-
-            "movies": len(movies_db),
-            "series": len(series_db),
-
-            "movie_pages": _movie_pages_loaded,
-            "series_pages": _series_pages_loaded,
-
-            "pages": len(pages_db),
-
-            "last_update": _last_update,
-
-            "error": _last_error,
-
-            "limits": {
-                "max_movie_pages": MAX_MOVIE_PAGES,
-                "max_series_pages": MAX_SERIES_PAGES,
-            }
-        })
-
-
-# ============================================================
-# API: Movies
-# ============================================================
-
-@app.route("/api/movies")
-def api_movies():
-
-    page = request.args.get(
-        "page",
-        default=0,
-        type=int
-    )
-
-    limit = request.args.get(
-        "limit",
-        default=DEFAULT_PAGE_SIZE,
-        type=int
-    )
-
-    result = paginate(
-        movies_db,
-        page,
-        limit
-    )
-
-    return jsonify({
-        "success": True,
-        "type": "movie",
-        **result
-    })
-
-
-# ============================================================
-# API: Series
-# ============================================================
-
-@app.route("/api/series")
-def api_series():
-
-    page = request.args.get(
-        "page",
-        default=0,
-        type=int
-    )
-
-    limit = request.args.get(
-        "limit",
-        default=DEFAULT_PAGE_SIZE,
-        type=int
-    )
-
-    result = paginate(
-        series_db,
-        page,
-        limit
-    )
-
-    return jsonify({
-        "success": True,
-        "type": "series",
-        **result
-    })
-
-
-# ============================================================
-# API: All Movies
-# ============================================================
-
-@app.route("/api/all-movies")
-def api_all_movies():
-
-    return jsonify({
-        "success": True,
-        "total": len(movies_db),
-        "data": movies_db
-    })
-
-
-# ============================================================
-# API: All Series
-# ============================================================
-
-@app.route("/api/all-series")
-def api_all_series():
-
-    return jsonify({
-        "success": True,
-        "total": len(series_db),
-        "data": series_db
-    })
-
-
-# ============================================================
-# API: Search
-# ============================================================
-
-@app.route("/api/search")
-def api_search():
-
-    query = request.args.get(
-        "q",
-        ""
-    )
-
-    item_type = request.args.get(
-        "type"
-    )
-
-    limit = request.args.get(
-        "limit",
-        default=50,
-        type=int
-    )
-
-    results = search_catalog(
-        query,
-        item_type
-    )
-
-    return jsonify({
-        "success": True,
-        "query": query,
-        "total": len(results),
-        "data": results[:limit]
-    })
-
-
-# ============================================================
-# API: Feed Pagination
-# ============================================================
-
-@app.route("/api/v1/feed/<category>")
-def api_feed(category):
-
-    page = request.args.get(
-        "page",
-        default=0,
-        type=int
-    )
-
-    limit = request.args.get(
-        "limit",
-        default=DEFAULT_PAGE_SIZE,
-        type=int
-    )
-
-    category = category.lower()
-
-    if category in ("movies", "movie"):
-
-        result = paginate(
-            movies_db,
-            page,
-            limit
-        )
-
-        return jsonify({
-            "success": True,
-            "source": "pages_db",
-            "category": "movies",
-            **result
-        })
-
-    if category in ("series", "serie"):
-
-        result = paginate(
-            series_db,
-            page,
-            limit
-        )
-
-        return jsonify({
-            "success": True,
-            "source": "pages_db",
-            "category": "series",
-            **result
-        })
-
-    if category == "home":
-
-        combined = (
-            movies_db[:12]
-            + series_db[:12]
-        )
-
-        return jsonify({
-            "success": True,
-            "source": "pages_db",
-            "category": "home",
-            "total": len(combined),
-            "data": combined
-        })
-
-    return jsonify({
-        "success": False,
-        "error": "تصنيف غير معروف",
-        "available": [
-            "home",
-            "movies",
-            "series"
-        ]
-    }), 404
-
-
-# ============================================================
-# API: Refresh
-# ============================================================
-
-@app.route(
-    "/api/refresh",
-    methods=["POST"]
-)
-def api_refresh():
-
-    if _is_loading:
-
-        return jsonify({
-            "success": False,
-            "message": "جاري تحديث البيانات بالفعل"
-        }), 409
-
-    thread = Thread(
-        target=populate_database,
-        daemon=True
-    )
-
-    thread.start()
-
-    return jsonify({
-        "success": True,
-        "message": "بدأ تحديث البيانات في الخلفية"
-    })
-
-
-# ============================================================
-# API: Pages DB information
-# ============================================================
-
-@app.route("/api/pages")
-def api_pages():
-
-    page_type = request.args.get(
-        "type"
-    )
-
-    result = []
-
-    with db_lock:
-
-        for url, data in pages_db.items():
-
-            if (
-                page_type
-                and data.get("type") != page_type
-            ):
-                continue
-
-            result.append({
-                "url": url,
-                "type": data.get("type"),
-                "page": data.get("page"),
-                "items_count": data.get(
-                    "items_count",
-                    0
-                ),
-                "updated_at": data.get(
-                    "updated_at"
-                )
-            })
-
-    return jsonify({
-        "success": True,
-        "total": len(result),
-        "data": result
-    })
-
-
-# ============================================================
-# API: Get one item by URL
-# ============================================================
-
-@app.route("/api/item")
-def api_item():
-
-    url = request.args.get(
-        "url",
-        ""
-    ).strip()
-
-    if not url:
-
-        return jsonify({
-            "success": False,
-            "error": "url مطلوب"
-        }), 400
-
-    all_items = movies_db + series_db
-
-    for item in all_items:
-
-        if item.get("link") == url:
-
-            return jsonify({
-                "success": True,
-                "data": item
-            })
-
-    return jsonify({
-        "success": False,
-        "error": "العنصر غير موجود"
-    }), 404
-
-
-# ============================================================
-# API: Health
-# ============================================================
-
-@app.route("/health")
-def health():
-
-    return jsonify({
-        "status": "ok",
-        "time": utc_now()
-    })
-
-
-# ============================================================
-# Frontend
-# ============================================================
-
-@app.route("/")
+# ======== نقاط النهاية (Endpoints) ========
+@app.route('/')
 def index():
+    return jsonify({"message": "🚀 خادم أكوام برو يعمل. استخدم /api/v1/feed/movies?page=0"})
 
-    return render_template(
-        "index.html"
-    )
+@app.route('/api/v1/feed/movies')
+def feed_movies():
+    page = request.args.get("page", 0)
+    limit = request.args.get("limit", 24)
+    movies = get_movies()
+    result = paginate(movies, page, limit)
+    result["success"] = True
+    result["category"] = "movies"
+    return jsonify(result)
 
+@app.route('/api/v1/feed/series')
+def feed_series():
+    page = request.args.get("page", 0)
+    limit = request.args.get("limit", 24)
+    series = get_series()
+    result = paginate(series, page, limit)
+    result["success"] = True
+    result["category"] = "series"
+    return jsonify(result)
 
-# ============================================================
-# Error handlers
-# ============================================================
+@app.route('/api/all-movies')
+def api_all_movies():
+    return jsonify({"success": True, "total": len(get_movies()), "data": get_movies()})
 
-@app.errorhandler(404)
-def not_found(error):
+@app.route('/api/all-series')
+def api_all_series():
+    return jsonify({"success": True, "total": len(get_series()), "data": get_series()})
 
-    if request.path.startswith("/api/"):
-
+@app.route('/api/status')
+def api_status():
+    with _db_lock:
         return jsonify({
-            "success": False,
-            "error": "API endpoint not found"
-        }), 404
+            "success": True,
+            "ready": bool(catalog["movies"] or catalog["series"]),
+            "loading": _is_loading,
+            "movies": len(catalog["movies"]),
+            "series": len(catalog["series"]),
+            "updated_at": catalog.get("updated_at")
+        })
 
-    return error
+@app.route('/api/refresh', methods=['POST'])
+def api_refresh():
+    if _is_loading:
+        return jsonify({"success": False, "message": "جاري التحديث بالفعل"}), 409
+    thread = threading.Thread(target=fetch_all_pages, daemon=True)
+    thread.start()
+    return jsonify({"success": True, "message": "بدأ تحديث البيانات في الخلفية"})
 
+@app.route('/api/movie-links')
+def movie_links():
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"success": False, "error": "url مطلوب"}), 400
+    try:
+        html = fetch_page(url)
+        soup = BeautifulSoup(html, "html.parser")
+        video = soup.find("video")
+        if not video:
+            return jsonify({"success": True, "links": []})
+        links = []
+        for source in video.find_all("source"):
+            src = source.get("src")
+            if not src:
+                continue
+            clean = re.sub(r'^https://ak\.sv(vlc://|intent:)', '', src)
+            clean = re.sub(r'^vlc://|^intent:', '', clean)
+            clean = clean.split('#Intent;')[0] if '#Intent;' in clean else clean
+            if clean.startswith('http'):
+                quality = source.get("size", "")
+                links.append({
+                    "quality": quality or "SD",
+                    "watch": clean,
+                    "download": clean
+                })
+        return jsonify({"success": True, "links": links})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-@app.errorhandler(500)
-def internal_error(error):
+@app.route('/api/series-episodes')
+def series_episodes():
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"success": False, "error": "url مطلوب"}), 400
+    try:
+        html = fetch_page(url)
+        soup = BeautifulSoup(html, "html.parser")
+        episodes = []
+        for item in soup.select('#series-episodes .bg-primary2'):
+            link_el = item.select_one('h2 a') or item.select_one('a')
+            if not link_el:
+                continue
+            href = link_el.get('href')
+            if not href:
+                continue
+            full_url = absolute_url(href)
+            title = clean_text(link_el.get_text(" ", strip=True))
+            num_match = re.search(r'\d+', title) or re.search(r'\d+', href)
+            number = num_match.group(0) if num_match else '?'
+            episodes.append({
+                "number": number,
+                "title": title,
+                "url": full_url
+            })
+        return jsonify({"success": True, "episodes": episodes})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-    if request.path.startswith("/api/"):
+@app.route('/api/search')
+def api_search():
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"success": True, "total": 0, "data": []})
+    q_lower = query.lower()
+    all_items = get_movies() + get_series()
+    results = []
+    for item in all_items:
+        title = item.get("title", "").lower()
+        if q_lower in title:
+            results.append(item)
+    limit = min(int(request.args.get("limit", 50)), 100)
+    return jsonify({"success": True, "query": query, "total": len(results), "data": results[:limit]})
 
-        return jsonify({
-            "success": False,
-            "error": "Internal server error"
-        }), 500
-
-    return error
-
-
-# ============================================================
-# Startup
-# ============================================================
-
-load_database()
-
-start_background_fetch()
-
-
-# ============================================================
-# Run
-# ============================================================
+# ======== تهيئة الخادم ========
+if not load_catalog_from_disk():
+    print("🔄 لا توجد بيانات، بدء الجلب الخلفي...")
+    threading.Thread(target=fetch_all_pages, daemon=True).start()
 
 if __name__ == "__main__":
-
-    app.run(
-        host="0.0.0.0",
-        port=int(
-            os.getenv("PORT", "5001")
-        ),
-        debug=False,
-        threaded=True
-    )
+    port = int(os.getenv("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=False)
